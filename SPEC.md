@@ -208,7 +208,7 @@ zod                       # runtime validation + type derivation for Jetstream e
 
 # Client
 react, react-dom
-react-router              # landing + dashboard routing
+@tanstack/react-router    # type-safe landing + dashboard routing
 @tanstack/react-query     # data fetching with polling
 recharts                  # charts
 tailwindcss               # styling
