@@ -129,6 +129,7 @@ paywall-radar/
 │       │   ├── models.ts      # Drizzle table definitions
 │       │   └── migrations/    # generated SQL migrations
 │       ├── domains.ts         # typed domain seed list and matching logic
+│       ├── pipeline.ts        # pure post-to-label processing
 │       └── scripts/
 │           └── initialize-database.ts
 ├── client/
