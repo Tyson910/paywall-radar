@@ -82,12 +82,11 @@ A public-facing dashboard shows live stats and labeler health.
 domains
 ├── id          INTEGER PRIMARY KEY
 ├── pattern     TEXT NOT NULL UNIQUE   -- "nytimes.com", "*.nytimes.com", "cooking.nytimes.com"
-├── type        TEXT NOT NULL          -- "exact", "wildcard"
 └── added_at    TEXT NOT NULL          -- ISO 8601
 
 labels_log
 ├── id          INTEGER PRIMARY KEY
-├── post_uri    TEXT NOT NULL
+├── post_uri    TEXT NOT NULL UNIQUE
 ├── author_did  TEXT NOT NULL
 ├── domain      TEXT NOT NULL          -- the matched domain
 └── labeled_at  TEXT NOT NULL          -- ISO 8601
@@ -122,13 +121,14 @@ paywall-radar/
 ├── server/
 │   ├── tsconfig.json          # target: Node
 │   └── src/
-│       ├── index.ts           # entry — starts labeler server, registers routes, starts Jetstream consumer
-│       ├── labeler.ts         # @skyware/labeler setup and label emission
-│       ├── jetstream.ts       # WebSocket connection, cursor management, reconnection
-│       ├── pipeline.ts        # pure function: post → extract links → match domains → LabelAction | null
+│       ├── index.ts           # backend entry point
+│       ├── database-initialization.ts # migration and seed lifecycle
+│       ├── db.ts              # database connection setup
 │       ├── domains.ts         # typed domain seed list and matching logic
-│       ├── api.ts             # Fastify routes for dashboard data (stats, charts, domains)
-│       └── db.ts              # SQLite setup (app tables), queries, cursor/stats persistence
+│       ├── labels.ts          # idempotent label recording
+│       ├── models.ts          # Drizzle table definitions
+│       └── scripts/
+│           └── initialize-database.ts
 ├── client/
 │   ├── tsconfig.json          # target: browser
 │   ├── index.html             # SEO-friendly landing content, React mount point
