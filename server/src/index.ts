@@ -5,6 +5,7 @@ import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
 import { loadCursorState, loadDomainPatterns, saveCursorState } from "./database/state.js";
 import { startJetstreamConsumer } from "./jetstream-consumer.js";
+import { registerDashboardRoutes } from "./routes.js";
 
 const did = process.env.DID;
 const signingKey = process.env.SIGNING_KEY;
@@ -26,6 +27,7 @@ async function main() {
   ]);
 
   const labeler = new LabelerServer({ did, signingKey, dbPath });
+  registerDashboardRoutes(labeler, db);
 
   const consumer = startJetstreamConsumer({
     initialState,
