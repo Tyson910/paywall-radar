@@ -79,21 +79,26 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
   let activeSocket: JetstreamSocket | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let processing = Promise.resolve();
+  let checkpointing = Promise.resolve();
 
-  async function flushState(): Promise<void> {
-    if (!stateIsDirty) {
-      return;
-    }
+  function flushState(): Promise<void> {
+    checkpointing = checkpointing.then(async () => {
+      if (!stateIsDirty) {
+        return;
+      }
 
-    const snapshot = { ...state };
-    stateIsDirty = false;
+      const snapshot = { ...state };
+      stateIsDirty = false;
 
-    try {
-      await options.saveState(snapshot);
-    } catch (error) {
-      stateIsDirty = true;
-      logger.error("Failed to save Jetstream cursor state", error);
-    }
+      try {
+        await options.saveState(snapshot);
+      } catch (error) {
+        stateIsDirty = true;
+        logger.error("Failed to save Jetstream cursor state", error);
+      }
+    });
+
+    return checkpointing;
   }
 
   function advanceState(cursorUs: number, postWasScanned: boolean): void {
@@ -140,6 +145,10 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
 
       processing = processing
         .then(async () => {
+          if (connectionFailed) {
+            return;
+          }
+
           const result = processJetstreamMessage(message, options.patterns);
 
           if (result.type === "invalid") {

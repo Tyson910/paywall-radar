@@ -125,4 +125,70 @@ describe("startJetstreamConsumer", () => {
     expect(consumer.getState()).toEqual({ cursorUs: 100, postsScanned: 3 });
     await consumer.stop();
   });
+
+  it("does not process queued messages after a post handler fails", async () => {
+    vi.useFakeTimers();
+    const socket = new FakeSocket();
+    const handled: number[] = [];
+    const consumer = startJetstreamConsumer({
+      initialState: { cursorUs: 100, postsScanned: 3 },
+      patterns: [],
+      handlePost: async (post) => {
+        handled.push(post.cursorUs);
+        throw new Error("label failed");
+      },
+      saveState: vi.fn(),
+      createSocket: () => socket,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    });
+
+    socket.emitMessage(createPost(200, "first"));
+    socket.emitMessage(createPost(300, "second"));
+    await settlePromises();
+
+    expect(handled).toEqual([200]);
+    expect(consumer.getState()).toEqual({ cursorUs: 100, postsScanned: 3 });
+    await consumer.stop();
+  });
+
+  it("serializes cursor checkpoints", async () => {
+    vi.useFakeTimers();
+    const socket = new FakeSocket();
+    const saved: Array<{ cursorUs: number; postsScanned: number }> = [];
+    let finishFirstSave = () => {};
+    const firstSave = new Promise<void>((resolve) => {
+      finishFirstSave = resolve;
+    });
+    const consumer = startJetstreamConsumer({
+      initialState: { cursorUs: 100, postsScanned: 3 },
+      patterns: [],
+      handlePost: async () => {},
+      saveState: async (state) => {
+        saved.push(state);
+        if (saved.length === 1) {
+          await firstSave;
+        }
+      },
+      createSocket: () => socket,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    });
+
+    socket.emitMessage(createPost(200, "first"));
+    await settlePromises();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    socket.emitMessage(createPost(300, "second"));
+    await settlePromises();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(saved).toEqual([{ cursorUs: 200, postsScanned: 4 }]);
+
+    finishFirstSave();
+    await settlePromises();
+    expect(saved).toEqual([
+      { cursorUs: 200, postsScanned: 4 },
+      { cursorUs: 300, postsScanned: 5 },
+    ]);
+
+    await consumer.stop();
+  });
 });
