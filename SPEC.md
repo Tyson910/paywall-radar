@@ -32,7 +32,7 @@ A public-facing dashboard shows live stats and labeler health.
 
 ### Domain List
 
-- **Format:** Seed file in the repo (`domains.json`), synced into SQLite on startup. Runtime additions/removals possible without redeploy.
+- **Format:** Typed seed list in `server/src/domains.ts`, synced into SQLite by the database initialization script. Runtime additions/removals possible without redeploy.
 - **Scope:** Curated small list (~20-50 domains) for MVP. The obvious paywalled publications.
 - **Matching:** Subdomain-aware with explicit wildcard support:
   - `nytimes.com` — matches exactly `nytimes.com`
@@ -119,7 +119,6 @@ cursor
 paywall-radar/
 ├── package.json
 ├── tsconfig.json              # project references
-├── domains.json               # seed list of paywalled domains
 ├── server/
 │   ├── tsconfig.json          # target: Node
 │   └── src/
@@ -127,7 +126,7 @@ paywall-radar/
 │       ├── labeler.ts         # @skyware/labeler setup and label emission
 │       ├── jetstream.ts       # WebSocket connection, cursor management, reconnection
 │       ├── pipeline.ts        # pure function: post → extract links → match domains → LabelAction | null
-│       ├── domains.ts         # domain list loading, matching logic
+│       ├── domains.ts         # typed domain seed list and matching logic
 │       ├── api.ts             # Fastify routes for dashboard data (stats, charts, domains)
 │       └── db.ts              # SQLite setup (app tables), queries, cursor/stats persistence
 ├── client/
@@ -154,7 +153,7 @@ paywall-radar/
 
 1. **Account setup** — Create Bluesky account, run labeler setup CLI, capture signing key, test with throwaway script
 2. **Project scaffolding** — pnpm init, directory structure, tsconfig files, Vite config, Tailwind setup
-3. **SQLite schema** — set up database, create tables, seed domains from `domains.json`
+3. **SQLite schema** — set up database, create tables, and seed domains with `pnpm db:init`
 4. **Domain matching** — implement the matching engine (wildcard/exact/subdomain logic). Unit test this.
 5. **Zod schemas** — define schemas for Jetstream post events, facets, embeds in `shared/schemas.ts`.
 
