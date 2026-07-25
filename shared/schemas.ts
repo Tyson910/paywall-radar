@@ -60,24 +60,48 @@ export const postRecordSchema = z.object({
   embed: z.union([externalEmbedSchema, otherEmbedSchema]).optional(),
 });
 
+export const jetstreamEventEnvelopeSchema = z.object({
+  did: z.string().startsWith("did:"),
+  time_us: z.number().int().nonnegative(),
+  kind: z.string(),
+});
+
+const commitFields = {
+  rev: z.string(),
+  collection: z.literal("app.bsky.feed.post"),
+  rkey: z.string(),
+  cid: z.string().optional(),
+};
+
+const postCommitSchema = z.discriminatedUnion("operation", [
+  z.object({
+    ...commitFields,
+    operation: z.literal("create"),
+    record: postRecordSchema,
+  }),
+  z.object({
+    ...commitFields,
+    operation: z.literal("update"),
+    record: postRecordSchema,
+  }),
+  z.object({
+    ...commitFields,
+    operation: z.literal("delete"),
+  }),
+]);
+
 export const jetstreamPostEventSchema = z.object({
   did: z.string().startsWith("did:"),
   time_us: z.number().int().nonnegative(),
   kind: z.literal("commit"),
-  commit: z.object({
-    rev: z.string(),
-    operation: z.enum(["create", "update", "delete"]),
-    collection: z.literal("app.bsky.feed.post"),
-    rkey: z.string(),
-    cid: z.string().optional(),
-    record: postRecordSchema.optional(),
-  }),
+  commit: postCommitSchema,
 });
 
 export type UriFeature = z.infer<typeof uriFeatureSchema>;
 export type PostFacet = z.infer<typeof facetSchema>;
 export type ExternalEmbed = z.infer<typeof externalEmbedSchema>;
 export type PostRecord = z.infer<typeof postRecordSchema>;
+export type JetstreamEventEnvelope = z.infer<typeof jetstreamEventEnvelopeSchema>;
 export type JetstreamPostEvent = z.infer<typeof jetstreamPostEventSchema>;
 export type StatsSummary = z.infer<typeof statsSummarySchema>;
 export type VolumePoint = z.infer<typeof volumePointSchema>;

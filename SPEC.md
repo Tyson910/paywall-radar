@@ -24,7 +24,7 @@ A public-facing dashboard shows live stats and labeler health.
 
 ### Firehose Ingestion
 
-- **Source:** Jetstream WebSocket (`wss://jetstream.atproto.com/subscribe`)
+- **Source:** Official Jetstream WebSocket (`wss://jetstream2.us-east.bsky.network/subscribe` by default)
 - **Filter:** `wantedCollections=app.bsky.feed.post` — only receive post create/update events
 - **Connection:** Server-side only. The Node.js backend maintains the persistent WebSocket connection. The frontend never touches Jetstream.
 - **Cursor:** Persist to SQLite every 5 seconds. Resume from cursor on reconnect. Events available for ~72 hours on Jetstream.
@@ -129,6 +129,7 @@ paywall-radar/
 │       │   ├── models.ts      # Drizzle table definitions
 │       │   └── migrations/    # generated SQL migrations
 │       ├── domains.ts         # typed domain seed list and matching logic
+│       ├── jetstream.ts       # event validation and post-event processing
 │       ├── pipeline.ts        # pure post-to-label processing
 │       └── scripts/
 │           └── initialize-database.ts
