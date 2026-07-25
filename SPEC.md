@@ -68,7 +68,7 @@ A public-facing dashboard shows live stats and labeler health.
 - **Data fetching:** SSE for real-time stats updates (posts scanned, labels emitted, volume). TanStack Query manages the SSE connection and provides caching/loading states.
 - **Charts:** Recharts — line/bar chart for hourly volume (last 24h), horizontal bar chart for top domains.
 - **Styling:** Tailwind CSS, dark mode via system preference (`darkMode: 'media'`, `dark:` variants). No manual toggle.
-- **API types:** Shared types in `shared/types.ts`, imported by both server and client.
+- **API contracts:** Shared Zod schemas and inferred types in `shared/schemas.ts`.
 
 ### Live Feed (Post-MVP)
 
@@ -145,8 +145,7 @@ paywall-radar/
 │           ├── VolumeChart.tsx
 │           └── TopDomains.tsx
 └── shared/
-    ├── types.ts               # API response types shared between server and client
-    └── schemas.ts             # Zod schemas for Jetstream events, post records, facets, embeds
+    └── schemas.ts             # Zod schemas and inferred types for API and Jetstream data
 ```
 
 ## Implementation Order
