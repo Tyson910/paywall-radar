@@ -122,11 +122,13 @@ paywall-radar/
 │   ├── tsconfig.json          # target: Node
 │   └── src/
 │       ├── index.ts           # backend entry point
-│       ├── database-initialization.ts # migration and seed lifecycle
-│       ├── db.ts              # database connection setup
+│       ├── database/
+│       │   ├── connection.ts  # database connection setup
+│       │   ├── initialize.ts  # migration and seed lifecycle
+│       │   ├── labels.ts      # idempotent label recording
+│       │   ├── models.ts      # Drizzle table definitions
+│       │   └── migrations/    # generated SQL migrations
 │       ├── domains.ts         # typed domain seed list and matching logic
-│       ├── labels.ts          # idempotent label recording
-│       ├── models.ts          # Drizzle table definitions
 │       └── scripts/
 │           └── initialize-database.ts
 ├── client/
