@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { blob, check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 export const domains = sqliteTable("domains", {
   id: integer().primaryKey({ autoIncrement: true }),
@@ -7,18 +7,24 @@ export const domains = sqliteTable("domains", {
   addedAt: text("added_at").notNull(),
 });
 
-export const labelsLog = sqliteTable(
-  "labels_log",
+export const labels = sqliteTable(
+  "labels",
   {
     id: integer().primaryKey({ autoIncrement: true }),
-    postUri: text("post_uri").notNull().unique(),
-    authorDid: text("author_did").notNull(),
+    src: text().notNull(),
+    uri: text().notNull().unique(),
+    val: text().notNull(),
+    neg: integer({ mode: "boolean" }).notNull().default(false),
+    cts: text().notNull(),
+    cid: text(),
+    exp: text(),
+    sig: blob({ mode: "buffer" }).notNull(),
     domain: text().notNull(),
-    labeledAt: text("labeled_at").notNull(),
+    authorDid: text("author_did").notNull(),
   },
   (table) => [
-    index("labels_log_labeled_at_idx").on(table.labeledAt),
-    index("labels_log_domain_idx").on(table.domain),
+    index("labels_cts_idx").on(table.cts),
+    index("labels_domain_idx").on(table.domain),
   ],
 );
 
@@ -34,5 +40,5 @@ export const cursor = sqliteTable(
 
 export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
-export type LabelLogRow = typeof labelsLog.$inferSelect;
+export type LabelRow = typeof labels.$inferSelect;
 export type CursorRow = typeof cursor.$inferSelect;

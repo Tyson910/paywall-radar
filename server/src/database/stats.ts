@@ -3,7 +3,7 @@ import { count, desc, max, sql } from "drizzle-orm";
 import type { DashboardSnapshot } from "#shared/schemas.js";
 
 import type { Database } from "./connection.js";
-import { cursor, labelsLog } from "./models.js";
+import { cursor, labels } from "./models.js";
 
 export async function getDashboardSnapshot(db: Database): Promise<DashboardSnapshot> {
   const [stats, volume, topDomains] = await Promise.all([
@@ -23,9 +23,9 @@ async function getStatsSummary(db: Database) {
   const [labelsRow] = await db
     .select({
       labelsEmitted: count(),
-      lastEventAt: max(labelsLog.labeledAt),
+      lastEventAt: max(labels.cts),
     })
-    .from(labelsLog);
+    .from(labels);
 
   return {
     postsScanned: cursorRow?.postsScanned ?? 0,
@@ -39,13 +39,13 @@ async function getHourlyVolume(db: Database) {
 
   const rows = await db
     .select({
-      hour: sql<string>`strftime('%Y-%m-%dT%H:00:00.000Z', ${labelsLog.labeledAt})`,
+      hour: sql<string>`strftime('%Y-%m-%dT%H:00:00.000Z', ${labels.cts})`,
       labels: count(),
     })
-    .from(labelsLog)
-    .where(sql`${labelsLog.labeledAt} >= ${cutoff}`)
-    .groupBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labelsLog.labeledAt})`)
-    .orderBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labelsLog.labeledAt})`);
+    .from(labels)
+    .where(sql`${labels.cts} >= ${cutoff}`)
+    .groupBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labels.cts})`)
+    .orderBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labels.cts})`);
 
   return rows.map((row) => ({ hour: row.hour, labels: row.labels }));
 }
@@ -53,11 +53,11 @@ async function getHourlyVolume(db: Database) {
 async function getTopDomains(db: Database) {
   const rows = await db
     .select({
-      domain: labelsLog.domain,
+      domain: labels.domain,
       labels: count(),
     })
-    .from(labelsLog)
-    .groupBy(labelsLog.domain)
+    .from(labels)
+    .groupBy(labels.domain)
     .orderBy(desc(count()));
 
   return rows.map((row) => ({ domain: row.domain, labels: row.labels }));

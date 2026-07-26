@@ -1,24 +1,39 @@
 import type { Database } from "./connection.js";
-import { labelsLog } from "./models.js";
+import { labels } from "./models.js";
 
 export interface LabelRecord {
-  postUri: string;
-  authorDid: string;
+  src: string;
+  uri: string;
+  val: string;
+  neg?: boolean;
+  cts: string;
+  cid?: string | null;
+  exp?: string | null;
+  sig: Uint8Array;
   domain: string;
-  labeledAt?: string;
+  authorDid: string;
 }
 
-export async function recordLabel(db: Database, label: LabelRecord): Promise<boolean> {
+export async function recordLabel(
+  db: Database,
+  label: LabelRecord,
+): Promise<{ id: number } | null> {
   const inserted = await db
-    .insert(labelsLog)
+    .insert(labels)
     .values({
-      postUri: label.postUri,
-      authorDid: label.authorDid,
+      src: label.src,
+      uri: label.uri,
+      val: label.val,
+      neg: label.neg ?? false,
+      cts: label.cts,
+      cid: label.cid ?? null,
+      exp: label.exp ?? null,
+      sig: Buffer.from(label.sig),
       domain: label.domain,
-      labeledAt: label.labeledAt ?? new Date().toISOString(),
+      authorDid: label.authorDid,
     })
-    .onConflictDoNothing({ target: labelsLog.postUri })
-    .returning({ id: labelsLog.id });
+    .onConflictDoNothing({ target: labels.uri })
+    .returning({ id: labels.id });
 
-  return inserted.length === 1;
+  return inserted[0] ?? null;
 }
