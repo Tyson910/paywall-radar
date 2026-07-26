@@ -10,11 +10,13 @@ export default defineConfig({
   resolve: {
     alias: {
       "#shared": fileURLToPath(new URL("../shared", import.meta.url)),
+      "#server": fileURLToPath(new URL("../server/src", import.meta.url)),
     },
   },
   server: {
     proxy: {
       "/api": "http://localhost:4100",
+      "/xrpc": "http://localhost:4100",
     },
   },
   build: {

@@ -1,14 +1,17 @@
 import { queryOptions } from "@tanstack/react-query";
+import { hc } from "hono/client";
 
-import type { DashboardSnapshot } from "#shared/schemas.js";
+import type { DashboardRoutes } from "#server/routes.js";
+
+const client = hc<DashboardRoutes>("/api");
 
 export function dashboardQueryOptions() {
   return queryOptions({
     queryKey: ["dashboard"] as const,
-    queryFn: async (): Promise<DashboardSnapshot> => {
-      const response = await fetch("/api/dashboard");
-      if (!response.ok) throw new Error("Failed to fetch dashboard data");
-      return response.json() as Promise<DashboardSnapshot>;
+    queryFn: async () => {
+      const res = await client.dashboard.$get();
+      if (!res.ok) throw new Error("Failed to fetch dashboard data");
+      return res.json();
     },
     staleTime: 10_000,
   });
