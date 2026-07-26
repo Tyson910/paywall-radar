@@ -5,11 +5,12 @@ import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
 import { loadCursorState, loadDomainPatterns, saveCursorState } from "./database/state.js";
 import { startJetstreamConsumer } from "./jetstream-consumer.js";
-import { registerDashboardRoutes } from "./routes.js";
+import { registerDashboardRoutes, registerStaticFiles } from "./routes.js";
 
 const did = process.env.DID;
 const signingKey = process.env.SIGNING_KEY;
 const dbPath = process.env.DB_PATH ?? "paywall-radar.db";
+const clientDir = process.env.CLIENT_DIR ?? "dist/client";
 const port = Number(process.env.PORT ?? 4100);
 
 async function main() {
@@ -28,6 +29,7 @@ async function main() {
 
   const labeler = new LabelerServer({ did, signingKey, dbPath });
   registerDashboardRoutes(labeler, db);
+  await registerStaticFiles(labeler, clientDir);
 
   const consumer = startJetstreamConsumer({
     initialState,

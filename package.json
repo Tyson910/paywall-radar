@@ -24,6 +24,7 @@
     "dev:client": "vite dev --config client/vite.config.ts"
   },
   "dependencies": {
+    "@fastify/static": "^10.1.2",
     "@libsql/client": "0.17.4",
     "@skyware/labeler": "0.2.0",
     "@tanstack/react-query": "^5.101.4",
