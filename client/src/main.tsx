@@ -1,10 +1,15 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./app.css";
 import { LiveStats } from "./components/LiveStats.js";
-import { Dashboard } from "./pages/Dashboard.js";
+import { Skeleton } from "./components/Skeleton.js";
+import { SuspenseSkeleton } from "./components/SuspenseSkeleton.js";
+
+const Dashboard = lazy(() =>
+  import("./pages/Dashboard.js").then((m) => ({ default: m.Dashboard })),
+);
 
 const queryClient = new QueryClient();
 
@@ -24,7 +29,19 @@ if (window.location.pathname === "/dashboard") {
   createRoot(appRoot).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
-        <Dashboard />
+        <Suspense
+          fallback={
+            <SuspenseSkeleton>
+              <div className="mx-auto max-w-4xl space-y-4 px-6 py-10">
+                <Skeleton className="h-8 w-48" />
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-24 w-full" />
+              </div>
+            </SuspenseSkeleton>
+          }
+        >
+          <Dashboard />
+        </Suspense>
       </QueryClientProvider>
     </StrictMode>,
   );
