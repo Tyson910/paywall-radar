@@ -18,7 +18,7 @@
     "db:studio": "drizzle-kit studio",
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
-    "lint": "oxlint .",
+    "lint": "oxlint . && pnpm format:check",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc -p tsconfig.typecheck.json && tsc -p client/tsconfig.json",
