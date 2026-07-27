@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "6",
-      "when": 1784956722856,
-      "tag": "0000_hard_power_pack",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "6",
-      "when": 1753487400000,
-      "tag": "0001_replace_labels_log",
+      "when": 1785178535356,
+      "tag": "0000_tranquil_shiva",
       "breakpoints": true
     }
   ]

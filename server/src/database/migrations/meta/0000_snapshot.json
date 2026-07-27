@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "21b13d23-1bca-43be-b5c2-d584f4c67f5a",
+  "id": "dd5ccd0f-8d30-410e-b01b-23222753880a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "cursor": {
@@ -69,7 +69,9 @@
       "indexes": {
         "domains_pattern_unique": {
           "name": "domains_pattern_unique",
-          "columns": ["pattern"],
+          "columns": [
+            "pattern"
+          ],
           "isUnique": true
         }
       },
@@ -78,8 +80,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "labels_log": {
-      "name": "labels_log",
+    "labels": {
+      "name": "labels",
       "columns": {
         "id": {
           "name": "id",
@@ -88,16 +90,59 @@
           "notNull": true,
           "autoincrement": true
         },
-        "post_uri": {
-          "name": "post_uri",
+        "src": {
+          "name": "src",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "author_did": {
-          "name": "author_did",
+        "uri": {
+          "name": "uri",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "val": {
+          "name": "val",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "neg": {
+          "name": "neg",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": false
+        },
+        "cts": {
+          "name": "cts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "cid": {
+          "name": "cid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "exp": {
+          "name": "exp",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "sig": {
+          "name": "sig",
+          "type": "blob",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -109,8 +154,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "labeled_at": {
-          "name": "labeled_at",
+        "author_did": {
+          "name": "author_did",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -118,19 +163,25 @@
         }
       },
       "indexes": {
-        "labels_log_post_uri_unique": {
-          "name": "labels_log_post_uri_unique",
-          "columns": ["post_uri"],
+        "labels_uri_unique": {
+          "name": "labels_uri_unique",
+          "columns": [
+            "uri"
+          ],
           "isUnique": true
         },
-        "labels_log_labeled_at_idx": {
-          "name": "labels_log_labeled_at_idx",
-          "columns": ["labeled_at"],
+        "labels_cts_idx": {
+          "name": "labels_cts_idx",
+          "columns": [
+            "cts"
+          ],
           "isUnique": false
         },
-        "labels_log_domain_idx": {
-          "name": "labels_log_domain_idx",
-          "columns": ["domain"],
+        "labels_domain_idx": {
+          "name": "labels_domain_idx",
+          "columns": [
+            "domain"
+          ],
           "isUnique": false
         }
       },

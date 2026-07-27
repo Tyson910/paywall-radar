@@ -12,14 +12,20 @@ CREATE TABLE `domains` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `domains_pattern_unique` ON `domains` (`pattern`);--> statement-breakpoint
-CREATE TABLE `labels_log` (
+CREATE TABLE `labels` (
 	`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,
-	`post_uri` text NOT NULL,
-	`author_did` text NOT NULL,
+	`src` text NOT NULL,
+	`uri` text NOT NULL,
+	`val` text NOT NULL,
+	`neg` integer DEFAULT false NOT NULL,
+	`cts` text NOT NULL,
+	`cid` text,
+	`exp` text,
+	`sig` blob NOT NULL,
 	`domain` text NOT NULL,
-	`labeled_at` text NOT NULL
+	`author_did` text NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `labels_log_post_uri_unique` ON `labels_log` (`post_uri`);--> statement-breakpoint
-CREATE INDEX `labels_log_labeled_at_idx` ON `labels_log` (`labeled_at`);--> statement-breakpoint
-CREATE INDEX `labels_log_domain_idx` ON `labels_log` (`domain`);
+CREATE UNIQUE INDEX `labels_uri_unique` ON `labels` (`uri`);--> statement-breakpoint
+CREATE INDEX `labels_cts_idx` ON `labels` (`cts`);--> statement-breakpoint
+CREATE INDEX `labels_domain_idx` ON `labels` (`domain`);
