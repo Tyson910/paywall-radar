@@ -14,7 +14,7 @@ A public-facing dashboard shows live stats and labeler health.
 
 - **Account:** Dedicated Bluesky account `@paywall-radar.bsky.social`
 - **Domain:** `paywall-radar` domain owned, available for custom handle migration later
-- **Setup:** Create account and run `npx @skyware/labeler setup` locally before writing application code. Capture signing key, test label emission with a throwaway script, confirm labels appear in Bluesky.
+- **Setup:** Create account and run `pnpm labeler:setup` to generate signing key, declare labeler service endpoint, and create labeler service record. Confirm labels appear in Bluesky.
 
 ### Label Semantics
 
@@ -49,25 +49,28 @@ A public-facing dashboard shows live stats and labeler health.
 
 ### Label Emission
 
-- **Library:** `@skyware/labeler` — handles labeler declaration, label signing, `subscribeLabels` WebSocket endpoint, and label persistence.
-- **API:** `labeler.createLabel({ uri: postUri, val: "paywall" })`
-- **Database:** Single SQLite database shared with the labeler. Pass `dbPath` to `@skyware/labeler`, and add app tables (domains, cursor) to the same file. One DB, one driver (`@libsql/client`).
+- **Signing:** Custom label signing using `@atproto/crypto` (Secp256k1 keypair) and `@atproto/lex-cbor` for CBOR encoding. Labels are signed per the AT Protocol label spec (ver, src, uri, val, neg, cts, sig).
+- **Endpoints:** Hand-rolled `com.atproto.label.queryLabels` (HTTP) and `com.atproto.label.subscribeLabels` (WebSocket with DAG-CBOR frames) on the Hono server.
+- **Setup:** `pnpm labeler:setup` script (`server/src/scripts/setup-labeler.ts`) handles labeler account declaration and signing key generation.
+- **Database:** Single SQLite database. The `labels` table stores full signed labels (src, uri, val, neg, cts, cid, exp, sig, domain, author_did). One DB, Drizzle ORM over `@libsql/client`.
 
 ### Server Architecture
 
 - **Process model:** Single Node.js process. WebSocket consumer, label emitter, and HTTP server all run in one process.
-- **HTTP framework:** Fastify — `@skyware/labeler` exposes its internal Fastify instance as a public `app` property. Dashboard API routes and static file serving are registered directly on it. One server, one port, no proxy.
-- **Port strategy:** Single port. The labeler's Fastify server handles both ATProto endpoints (`/xrpc/*`) and dashboard API routes.
+- **HTTP framework:** Hono with `@hono/node-server`. Dashboard API routes (`/api/*`), labeler XRPC endpoints (`/xrpc/*`), and static file serving are all registered on a single Hono app.
+- **Port strategy:** Single port. The Hono server handles ATProto endpoints, dashboard API routes, and serves the client SPA.
 
 ### Frontend
 
 - **Framework:** Vite + React SPA (TypeScript)
 - **Pages:**
-  - `/` — Landing page. Hero with tagline, "subscribe to this labeler" CTA, stats summary. Real HTML content for SEO (crawlers get meaningful content before React hydrates).
-  - `/dashboard` — Stats cards, volume-over-time chart, top paywalled domains breakdown.
-- **Data fetching:** SSE for real-time stats updates (posts scanned, labels emitted, volume). TanStack Query manages the SSE connection and provides caching/loading states.
+  - `/` — Landing page. Static HTML in `index.html` with hero, tagline, "subscribe to this labeler" CTA. A React island (`LiveStats`) hydrates into a mount point to show live stats. Real HTML content for SEO.
+  - `/dashboard` — Lazy-loaded React app. Stats cards, volume-over-time chart, top paywalled domains breakdown.
+- **Data fetching:** TanStack Query with polling for stats updates (posts scanned, labels emitted, volume).
 - **Charts:** Recharts — line/bar chart for hourly volume (last 24h), horizontal bar chart for top domains.
 - **Styling:** Tailwind CSS, dark mode via system preference (`darkMode: 'media'`, `dark:` variants). No manual toggle.
+- **Routing:** No client-side router. Landing page is static HTML in `index.html` with a React island for live stats. Dashboard is a lazy-loaded React app mounted at `/dashboard`.
+- **Code splitting:** Dashboard chunk is lazy-loaded so the landing page doesn't pull in Recharts. `SuspenseSkeleton` delays fallback rendering by 500ms to avoid flash.
 - **API contracts:** Shared Zod schemas and inferred types in `shared/schemas.ts`.
 
 ### Live Feed (Post-MVP)
@@ -76,26 +79,34 @@ A public-facing dashboard shows live stats and labeler health.
 - Per-item: author handle, matched domain, relative timestamp, link to post on Bluesky
 - Deprioritized — real-time aggregate stats are sufficient for MVP
 
-### Data Model (shared SQLite database with labeler)
+### Data Model (SQLite via Drizzle ORM)
 
 ```text
 domains
-├── id          INTEGER PRIMARY KEY
+├── id          INTEGER PRIMARY KEY AUTOINCREMENT
 ├── pattern     TEXT NOT NULL UNIQUE   -- "nytimes.com", "*.nytimes.com", "cooking.nytimes.com"
 └── added_at    TEXT NOT NULL          -- ISO 8601
 
-labels_log
-├── id          INTEGER PRIMARY KEY
-├── post_uri    TEXT NOT NULL UNIQUE
-├── author_did  TEXT NOT NULL
-├── domain      TEXT NOT NULL          -- the matched domain
-└── labeled_at  TEXT NOT NULL          -- ISO 8601
+labels
+├── id          INTEGER PRIMARY KEY AUTOINCREMENT
+├── src         TEXT NOT NULL          -- labeler DID
+├── uri         TEXT NOT NULL UNIQUE   -- post AT URI
+├── val         TEXT NOT NULL          -- label value ("paywall")
+├── neg         INTEGER NOT NULL DEFAULT 0  -- boolean, negation flag
+├── cts         TEXT NOT NULL          -- ISO 8601 creation timestamp
+├── cid         TEXT                   -- optional content CID
+├── exp         TEXT                   -- optional expiration
+├── sig         BLOB NOT NULL          -- cryptographic signature bytes
+├── domain      TEXT NOT NULL          -- matched domain (indexed)
+└── author_did  TEXT NOT NULL          -- post author DID
 
 cursor
 ├── id          INTEGER PRIMARY KEY CHECK (id = 1)  -- single-row table
 ├── cursor_us   INTEGER NOT NULL       -- Jetstream cursor (Unix microseconds)
 └── posts_scanned INTEGER NOT NULL DEFAULT 0
 ```
+
+Migrations managed by Drizzle Kit (`pnpm db:generate`, `pnpm db:migrate`).
 
 ### Deploy
 
@@ -108,9 +119,11 @@ cursor
 ### Tooling
 
 - **Package manager:** pnpm
-- **Linting:** oxlint with JS plugins (`@tanstack/eslint-plugin-query`, `eslint-plugin-react-hooks`)
+- **Linting:** oxlint
 - **Formatting:** oxfmt
-- **TypeScript:** Separate `tsconfig.json` per directory (server, client), root `tsconfig.json` with project references
+- **Testing:** vitest
+- **ORM:** Drizzle ORM with Drizzle Kit for migrations
+- **TypeScript:** Separate `tsconfig.json` per directory (server, client, shared), root `tsconfig.json` with project references
 
 ## Project Structure
 
@@ -118,32 +131,43 @@ cursor
 paywall-radar/
 ├── package.json
 ├── tsconfig.json              # project references
+├── vitest.config.ts
+├── drizzle.config.ts
 ├── server/
 │   ├── tsconfig.json          # target: Node
 │   └── src/
-│       ├── index.ts           # backend entry point
+│       ├── index.ts           # backend entry: Hono server, XRPC endpoints, Jetstream consumer
+│       ├── labeler.ts         # label signing, CBOR frame encoding, HTTP formatting
 │       ├── database/
 │       │   ├── connection.ts  # database connection setup
 │       │   ├── initialize.ts  # migration and seed lifecycle
 │       │   ├── labels.ts      # idempotent label recording
 │       │   ├── models.ts      # Drizzle table definitions
+│       │   ├── state.ts       # cursor and domain pattern loading/saving
+│       │   ├── stats.ts       # dashboard snapshot queries
 │       │   └── migrations/    # generated SQL migrations
 │       ├── domains.ts         # typed domain seed list and matching logic
 │       ├── jetstream.ts       # event validation and post-event processing
+│       ├── jetstream-consumer.ts  # WebSocket connection, cursor persistence, reconnection
 │       ├── pipeline.ts        # pure post-to-label processing
+│       ├── routes.ts          # dashboard API routes (Hono)
 │       └── scripts/
-│           └── initialize-database.ts
+│           ├── initialize-database.ts
+│           └── setup-labeler.ts   # labeler account declaration and key generation
 ├── client/
 │   ├── tsconfig.json          # target: browser
-│   ├── index.html             # SEO-friendly landing content, React mount point
+│   ├── vite.config.ts
+│   ├── index.html             # SEO-friendly landing content, React mount points
 │   └── src/
-│       ├── main.tsx           # React entry
-│       ├── App.tsx            # Router (landing + dashboard)
-│       ├── api.ts             # fetch client for dashboard API
+│       ├── main.tsx           # React entry (live stats island + lazy dashboard)
+│       ├── api.ts             # TanStack Query options for dashboard API
 │       ├── pages/
-│       │   ├── Landing.tsx    # Hero, CTA, stats summary
-│       │   └── Dashboard.tsx  # Stats cards, charts
+│       │   └── Dashboard.tsx  # Stats cards, charts (lazy-loaded)
 │       └── components/
+│           ├── LiveStats.tsx       # Landing page stats island
+│           ├── QueryGuard.tsx      # Error/loading boundary for queries
+│           ├── Skeleton.tsx        # Loading skeleton primitives
+│           ├── SuspenseSkeleton.tsx # Delayed Suspense fallback
 │           ├── StatsCards.tsx
 │           ├── VolumeChart.tsx
 │           └── TopDomains.tsx
@@ -183,9 +207,9 @@ paywall-radar/
 
 ### 1. Labeler account setup and signing key management
 
-`@skyware/labeler` requires a signing key generated during setup, registered in the DID document. If lost, key rotation requires a PLC operation. The initial setup (CLI, signing key capture, DID service endpoint configuration) is fiddly and poorly documented.
+The labeler needs a Secp256k1 signing key registered in the DID document. If lost, key rotation requires a PLC operation. The initial setup (key generation, DID service endpoint declaration, `app.bsky.labeler.service` record creation) is fiddly.
 
-**Approach:** Do this first, locally, before writing any application code. Test label emission with a minimal script. Don't move on until labels appear in Bluesky.
+**Approach:** `pnpm labeler:setup` script handles the full flow: generates a signing key, updates the DID document with the labeler service endpoint, and creates the labeler service record. Run once before deploying. Test label emission with a minimal script. Don't move on until labels appear in Bluesky.
 
 ### 2. WebSocket reliability at firehose scale
 
@@ -203,14 +227,17 @@ Labels can be emitted and stored locally but still not appear in users' feeds if
 
 ```text
 # Server
-@skyware/labeler          # labeler protocol, signing, subscribeLabels endpoint, Fastify server
-@libsql/client            # SQLite driver (shared DB with labeler)
+@atproto/crypto           # Secp256k1 keypair for label signing
+@atproto/lex-cbor         # CBOR encoding for label frames
+hono                      # HTTP framework
+@hono/node-server         # Node.js adapter for Hono (HTTP + WebSocket)
+@libsql/client            # SQLite driver
+drizzle-orm               # ORM over @libsql/client
 ws                        # WebSocket client for Jetstream
 zod                       # runtime validation + type derivation for Jetstream events
 
 # Client
 react, react-dom
-@tanstack/react-router    # type-safe landing + dashboard routing
 @tanstack/react-query     # data fetching with polling
 recharts                  # charts
 tailwindcss               # styling
@@ -219,8 +246,9 @@ tailwindcss               # styling
 typescript
 vite
 @vitejs/plugin-react
+@tailwindcss/vite
+drizzle-kit               # migration generation and management
+vitest                    # testing
 oxlint                    # linting
-# oxfmt                   # formatting
-@tanstack/eslint-plugin-query
-eslint-plugin-react-hooks
+oxfmt                     # formatting
 ```
