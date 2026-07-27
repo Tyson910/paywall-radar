@@ -22,5 +22,11 @@ export default defineConfig({
   build: {
     outDir: fileURLToPath(new URL("../dist/client", import.meta.url)),
     emptyOutDir: true,
+    rolldownOptions: {
+      input: {
+        main: fileURLToPath(new URL("index.html", import.meta.url)),
+        dashboard: fileURLToPath(new URL("dashboard.html", import.meta.url)),
+      },
+    },
   },
 });

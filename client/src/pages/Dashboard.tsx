@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { StatsSummary, VolumePoint } from "#shared/schemas.js";
+
 import { dashboardQueryOptions } from "../api.js";
 import { QueryGuard } from "../components/QueryGuard.js";
 import { Skeleton } from "../components/Skeleton.js";
@@ -21,13 +22,7 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-function Tile({
-  children,
-  className = "",
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) {
+function Tile({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
     <div
       className={`rounded-2xl bg-white p-6 shadow-sm dark:border dark:border-neutral-700/50 dark:bg-neutral-800 dark:shadow-none ${className}`}
@@ -71,10 +66,12 @@ function StatusPulse({ lastEventAt }: { lastEventAt: string | null }) {
 
   return (
     <Tile className="flex flex-col items-start justify-center gap-2">
-      <span className={`h-3 w-3 rounded-full ${color}`} />
+      <div className="flex flex-row items-center">
+      <span className={`size-3 rounded-full ${color} mr-1.5 animate-pulse`} />
       <p className="text-sm font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
         Status
       </p>
+      </div>
       <p className="text-2xl font-bold tracking-tight">{label}</p>
     </Tile>
   );
@@ -127,7 +124,11 @@ function BentoSkeleton() {
   );
 }
 
-function DashboardContent({ stats, volume, topDomains }: {
+function DashboardContent({
+  stats,
+  volume,
+  topDomains,
+}: {
   stats: StatsSummary;
   volume: VolumePoint[];
   topDomains: { domain: string; labels: number }[];
@@ -171,10 +172,7 @@ export function Dashboard() {
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900">
       <div className="mx-auto max-w-7xl p-5">
         <p className="mb-5 text-sm text-neutral-400 dark:text-neutral-500">
-          <a
-            href="/"
-            className="hover:text-neutral-600 dark:hover:text-neutral-300"
-          >
+          <a href="/" className="hover:text-neutral-600 dark:hover:text-neutral-300">
             Paywall Radar
           </a>
           <span className="mx-1.5">/</span>

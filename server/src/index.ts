@@ -125,11 +125,11 @@ async function main() {
     }),
   );
 
-  // Static file serving + SPA fallback
   const root = resolve(clientDir);
   if (existsSync(root)) {
     app.use("/*", serveStatic({ root: clientDir }));
-    app.get("*", serveStatic({ root: clientDir, path: "index.html" }));
+    app.get("/", serveStatic({ root: clientDir, path: "index.html" }));
+    app.get("/dashboard", serveStatic({ root: clientDir, path: "dashboard.html" }));
   } else {
     console.warn(`Static file directory not found: ${root} — skipping static serving`);
   }
