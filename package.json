@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "pnpm run clean && tsc -b shared/tsconfig.build.json server/tsconfig.build.json && cp -R server/src/database/migrations dist/server/database/migrations",
+    "build:client": "vite build --config client/vite.config.ts",
     "clean": "tsc -b --clean && rm -rf dist",
     "dev": "tsx watch server/src/index.ts",
     "dev:server": "tsx watch server/src/index.ts",
