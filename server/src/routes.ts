@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 
 import type { Database } from "./database/connection.js";
+
 import { getDashboardSnapshot } from "./database/stats.js";
 
 export function createDashboardRoutes(db: Database) {

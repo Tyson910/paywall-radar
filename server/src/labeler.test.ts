@@ -117,4 +117,3 @@ describe("formatLabelForHttp", () => {
     expect(http).not.toHaveProperty("exp");
   });
 });
-

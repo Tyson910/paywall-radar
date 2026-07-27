@@ -1,4 +1,5 @@
 import type { Database } from "./connection.js";
+
 import { labels } from "./models.js";
 
 export interface LabelRecord {

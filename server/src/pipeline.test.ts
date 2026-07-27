@@ -1,5 +1,6 @@
-import type { PostRecord } from "#shared/schemas.js";
 import { describe, expect, it } from "vitest";
+
+import type { PostRecord } from "#shared/schemas.js";
 
 import { parseDomainPatterns } from "./domains.js";
 import { processPost } from "./pipeline.js";

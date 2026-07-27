@@ -2,11 +2,12 @@ import { EventEmitter } from "node:events";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+import type { WSContext } from "hono/ws";
+
 import { serve, upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { gt } from "drizzle-orm";
 import { Hono } from "hono";
-import type { WSContext } from "hono/ws";
 import { WebSocketServer } from "ws";
 
 import { openDatabase } from "./database/connection.js";
@@ -58,10 +59,7 @@ async function main() {
   console.log(`Database initialized with ${domainCount} domain patterns`);
 
   const { client, db } = openDatabase(dbPath);
-  const [patterns, initialState] = await Promise.all([
-    loadDomainPatterns(db),
-    loadCursorState(db),
-  ]);
+  const [patterns, initialState] = await Promise.all([loadDomainPatterns(db), loadCursorState(db)]);
 
   const keypair = await loadSigningKey(signingKey);
   const labelEmitter = new EventEmitter();
@@ -77,20 +75,14 @@ async function main() {
   const app = new Hono();
   const dashboardRoutes = createDashboardRoutes(db);
   app.route("/api", dashboardRoutes);
-
   app.get("/xrpc/_health", (c) => c.json({ version: 1 }));
-
   app.get("/xrpc/com.atproto.label.queryLabels", async (c) => {
     const cursorParam = c.req.query("cursor");
     const limitParam = c.req.query("limit");
     const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 250);
     const afterId = cursorParam ? Number(cursorParam) : 0;
 
-    const rows = await db
-      .select()
-      .from(labels)
-      .where(gt(labels.id, afterId))
-      .limit(limit);
+    const rows = await db.select().from(labels).where(gt(labels.id, afterId)).limit(limit);
 
     const formatted = rows.map((row) => formatLabelForHttp(rowToSignedLabel(row)));
     const lastRow = rows[rows.length - 1];

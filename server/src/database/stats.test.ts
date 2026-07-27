@@ -2,11 +2,12 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
-
 import type { Client } from "@libsql/client";
 
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
 import type { Database } from "./connection.js";
+
 import { openDatabase } from "./connection.js";
 import { initializeDatabase } from "./initialize.js";
 import { recordLabel } from "./labels.js";
@@ -58,10 +59,30 @@ describe("getDashboardSnapshot", () => {
     const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
     const testLabels = [
-      makeLabel({ uri: "at://did:plc:a/app.bsky.feed.post/1", authorDid: "did:plc:a", domain: "nytimes.com", cts: twoHoursAgo.toISOString() }),
-      makeLabel({ uri: "at://did:plc:b/app.bsky.feed.post/2", authorDid: "did:plc:b", domain: "nytimes.com", cts: twoHoursAgo.toISOString() }),
-      makeLabel({ uri: "at://did:plc:c/app.bsky.feed.post/3", authorDid: "did:plc:c", domain: "wsj.com", cts: oneHourAgo.toISOString() }),
-      makeLabel({ uri: "at://did:plc:d/app.bsky.feed.post/4", authorDid: "did:plc:d", domain: "nytimes.com", cts: now.toISOString() }),
+      makeLabel({
+        uri: "at://did:plc:a/app.bsky.feed.post/1",
+        authorDid: "did:plc:a",
+        domain: "nytimes.com",
+        cts: twoHoursAgo.toISOString(),
+      }),
+      makeLabel({
+        uri: "at://did:plc:b/app.bsky.feed.post/2",
+        authorDid: "did:plc:b",
+        domain: "nytimes.com",
+        cts: twoHoursAgo.toISOString(),
+      }),
+      makeLabel({
+        uri: "at://did:plc:c/app.bsky.feed.post/3",
+        authorDid: "did:plc:c",
+        domain: "wsj.com",
+        cts: oneHourAgo.toISOString(),
+      }),
+      makeLabel({
+        uri: "at://did:plc:d/app.bsky.feed.post/4",
+        authorDid: "did:plc:d",
+        domain: "nytimes.com",
+        cts: now.toISOString(),
+      }),
     ];
 
     for (const label of testLabels) {
@@ -84,12 +105,15 @@ describe("getDashboardSnapshot", () => {
   });
 
   it("excludes volume points older than 24 hours", async () => {
-    await recordLabel(db, makeLabel({
-      uri: "at://did:plc:e/app.bsky.feed.post/5",
-      authorDid: "did:plc:e",
-      domain: "wsj.com",
-      cts: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
-    }));
+    await recordLabel(
+      db,
+      makeLabel({
+        uri: "at://did:plc:e/app.bsky.feed.post/5",
+        authorDid: "did:plc:e",
+        domain: "wsj.com",
+        cts: new Date(Date.now() - 25 * 60 * 60 * 1000).toISOString(),
+      }),
+    );
 
     const snapshot = await getDashboardSnapshot(db);
 

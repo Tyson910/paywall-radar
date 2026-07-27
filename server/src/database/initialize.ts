@@ -4,6 +4,7 @@ import { count } from "drizzle-orm";
 import { migrate } from "drizzle-orm/libsql/migrator";
 
 import { parseDomainPatterns, paywalledDomainPatterns } from "../domains.js";
+
 import { openDatabase } from "./connection.js";
 import { cursor, domains } from "./models.js";
 

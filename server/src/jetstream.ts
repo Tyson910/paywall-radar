@@ -1,6 +1,7 @@
 import { jetstreamEventEnvelopeSchema, jetstreamPostEventSchema } from "#shared/schemas.js";
 
 import type { DomainPattern } from "./domains.js";
+
 import { processPost, type LabelAction } from "./pipeline.js";
 
 export const defaultJetstreamEndpoint = "wss://jetstream2.us-east.bsky.network/subscribe";

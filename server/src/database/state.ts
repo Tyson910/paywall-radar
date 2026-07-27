@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 
 import { parseDomainPatterns, type DomainPattern } from "../domains.js";
+
 import type { Database } from "./connection.js";
+
 import { cursor, domains } from "./models.js";
 
 export interface CursorState {

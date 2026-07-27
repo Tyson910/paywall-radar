@@ -1,4 +1,5 @@
 import type { UseQueryResult } from "@tanstack/react-query";
+
 import { type ReactNode, useEffect, useState } from "react";
 
 import { Skeleton } from "./Skeleton.js";
@@ -35,7 +36,7 @@ function SkeletonPreset({ type }: { type: SkeletonType }) {
     case "inline":
       return <Skeleton className="h-10 w-full" />;
     case "full-container-size":
-      return <Skeleton className="h-[800px] w-full" />;
+      return <Skeleton className="h-200 w-full" />;
   }
 }
 
@@ -70,9 +71,7 @@ export function QueryGuard<TData, TError = Error>(props: Props<TData, TError>) {
       <div className="flex flex-1 flex-col items-center justify-center gap-4 text-center">
         <h1 className="text-4xl font-bold">Error</h1>
         <p className="text-neutral-500 dark:text-neutral-400">
-          {query.error instanceof Error
-            ? query.error.message
-            : "An unexpected error occurred."}
+          {query.error instanceof Error ? query.error.message : "An unexpected error occurred."}
         </p>
       </div>
     );

@@ -22,10 +22,7 @@ export const labels = sqliteTable(
     domain: text().notNull(),
     authorDid: text("author_did").notNull(),
   },
-  (table) => [
-    index("labels_cts_idx").on(table.cts),
-    index("labels_domain_idx").on(table.domain),
-  ],
+  (table) => [index("labels_cts_idx").on(table.cts), index("labels_domain_idx").on(table.domain)],
 );
 
 export const cursor = sqliteTable(

@@ -1,5 +1,5 @@
-import { createInterface } from "node:readline/promises";
 import { stdin, stdout } from "node:process";
+import { createInterface } from "node:readline/promises";
 
 import { Secp256k1Keypair } from "@atproto/crypto";
 
@@ -52,7 +52,10 @@ async function main() {
 
     const identifier = await prompt(rl, "Handle or DID: ");
     const password = await prompt(rl, "App password: ");
-    const serviceEndpoint = await prompt(rl, "Labeler service URL (e.g. https://paywall-radar.example.com): ");
+    const serviceEndpoint = await prompt(
+      rl,
+      "Labeler service URL (e.g. https://paywall-radar.example.com): ",
+    );
 
     // Authenticate
     console.log("\nAuthenticating...");
@@ -77,7 +80,11 @@ async function main() {
 
     // Check current DID document
     console.log("\nChecking current DID document...");
-    const credentials = (await xrpc(session, "GET", "com.atproto.identity.getRecommendedDidCredentials")) as {
+    const credentials = (await xrpc(
+      session,
+      "GET",
+      "com.atproto.identity.getRecommendedDidCredentials",
+    )) as {
       verificationMethods?: Record<string, string>;
       services?: Record<string, { type: string; endpoint: string }>;
     };

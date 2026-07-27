@@ -3,6 +3,7 @@ import { count, desc, max, sql } from "drizzle-orm";
 import type { DashboardSnapshot } from "#shared/schemas.js";
 
 import type { Database } from "./connection.js";
+
 import { cursor, labels } from "./models.js";
 
 export async function getDashboardSnapshot(db: Database): Promise<DashboardSnapshot> {
@@ -16,9 +17,7 @@ export async function getDashboardSnapshot(db: Database): Promise<DashboardSnaps
 }
 
 async function getStatsSummary(db: Database) {
-  const [cursorRow] = await db
-    .select({ postsScanned: cursor.postsScanned })
-    .from(cursor);
+  const [cursorRow] = await db.select({ postsScanned: cursor.postsScanned }).from(cursor);
 
   const [labelsRow] = await db
     .select({

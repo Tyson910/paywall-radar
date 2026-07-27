@@ -2,6 +2,7 @@ import WebSocket, { type RawData } from "ws";
 
 import type { CursorState } from "./database/state.js";
 import type { DomainPattern } from "./domains.js";
+
 import {
   buildJetstreamUrl,
   defaultJetstreamEndpoint,
