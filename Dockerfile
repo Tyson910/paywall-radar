@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-# ---- base -------------------------------------------------------------------
-FROM node:22-alpine AS base
+# ---- base (debian slim — glibc, matches distroless runtime) -----------------
+FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
 WORKDIR /app
@@ -31,24 +31,28 @@ COPY tsconfig.json tsconfig.typecheck.json ./
 RUN pnpm build && pnpm build:client
 
 
-# ---- runtime (plain node:alpine, no pnpm/corepack/yarn) ---------------------
-FROM node:22-alpine AS runtime
+# ---- fs prep (distroless has no shell, so set up data dir here) -------------
+FROM alpine:3 AS fs
+RUN mkdir -p /fs/data \
+ && touch /fs/data/.keep \
+ && chown -R 65532:65532 /fs
+
+
+# ---- runtime (distroless — no shell, no npm, no package manager) ------------
+FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
 ENV NODE_ENV=production \
     PORT=4100 \
     DB_PATH=/app/data/paywall-radar.db \
     CLIENT_DIR=/app/dist/client
 WORKDIR /app
 
-RUN addgroup -S app && adduser -S app -G app \
- && mkdir -p /app/data \
- && chown app:app /app/data
-USER app
+COPY --from=prod-deps --chown=nonroot:nonroot /app/node_modules ./node_modules
+COPY --chown=nonroot:nonroot package.json ./
+COPY --from=build --chown=nonroot:nonroot /app/dist ./dist
+COPY --from=fs --chown=nonroot:nonroot /fs/data ./data
 
-COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
-COPY --chown=app:app package.json ./
-COPY --from=build --chown=app:app /app/dist ./dist
-
+USER nonroot:nonroot
 EXPOSE 4100
 VOLUME ["/app/data"]
 
-CMD ["node", "dist/server/index.js"]
+CMD ["dist/server/index.js"]
