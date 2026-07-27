@@ -42,20 +42,20 @@ export function VolumeChart({ data }: { data: VolumePoint[] }) {
 
   if (data.length === 0) {
     return (
-      <div className="flex h-64 items-center justify-center text-neutral-400 dark:text-neutral-500">
+      <div className="flex h-full min-h-50 items-center justify-center text-neutral-400 dark:text-neutral-500">
         No label activity in the last 24 hours
       </div>
     );
   }
 
   return (
-    <div className="h-64">
+    <div className="h-full min-h-50">
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -16 }}>
           <CartesianGrid
             strokeDasharray=""
             stroke="var(--color-neutral-200)"
-            className="dark:[stroke:var(--color-neutral-700)]"
+            className="dark:stroke-neutral-700"
             vertical={false}
           />
           <XAxis

@@ -13,8 +13,10 @@ const Dashboard = lazy(() =>
 
 const queryClient = new QueryClient();
 
+const isDashboard = window.location.pathname === "/dashboard";
+
 const statsRoot = document.getElementById("live-stats");
-if (statsRoot) {
+if (statsRoot && !isDashboard) {
   createRoot(statsRoot).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
@@ -25,17 +27,29 @@ if (statsRoot) {
 }
 
 const appRoot = document.getElementById("root")!;
-if (window.location.pathname === "/dashboard") {
+if (isDashboard) {
+  const homepageContent = document.querySelector(".mx-auto.max-w-2xl");
+  if (homepageContent instanceof HTMLElement) homepageContent.style.display = "none";
+
   createRoot(appRoot).render(
     <StrictMode>
       <QueryClientProvider client={queryClient}>
         <Suspense
           fallback={
             <SuspenseSkeleton>
-              <div className="mx-auto max-w-4xl space-y-4 px-6 py-10">
-                <Skeleton className="h-8 w-48" />
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-24 w-full" />
+              <div className="min-h-screen bg-neutral-100 p-5 dark:bg-neutral-900">
+                <div className="mx-auto max-w-7xl">
+                  <Skeleton className="mb-5 h-4 w-40 rounded-2xl" />
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
+                    <Skeleton className="h-32 rounded-2xl" />
+                    <Skeleton className="h-32 rounded-2xl" />
+                    <Skeleton className="h-32 rounded-2xl lg:col-span-2 lg:row-span-2" />
+                    <Skeleton className="h-32 rounded-2xl" />
+                    <Skeleton className="h-32 rounded-2xl" />
+                    <Skeleton className="h-40 rounded-2xl lg:col-span-3" />
+                    <Skeleton className="h-40 rounded-2xl" />
+                  </div>
+                </div>
               </div>
             </SuspenseSkeleton>
           }
