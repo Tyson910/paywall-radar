@@ -14,6 +14,13 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 
+# ---- prod deps (runtime deps only) ------------------------------------------
+FROM base AS prod-deps
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile --prod
+
+
 # ---- build ------------------------------------------------------------------
 FROM deps AS build
 COPY shared/ ./shared/
@@ -24,22 +31,22 @@ COPY tsconfig.json tsconfig.typecheck.json ./
 RUN pnpm build && pnpm build:client
 
 
-# ---- runtime (production deps only) -----------------------------------------
-FROM base AS runtime
+# ---- runtime (plain node:alpine, no pnpm/corepack/yarn) ---------------------
+FROM node:22-alpine AS runtime
 ENV NODE_ENV=production \
     PORT=4100 \
     DB_PATH=/app/data/paywall-radar.db \
     CLIENT_DIR=/app/dist/client
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
-
-COPY --from=build /app/dist ./dist
+WORKDIR /app
 
 RUN addgroup -S app && adduser -S app -G app \
  && mkdir -p /app/data \
- && chown -R app:app /app
+ && chown app:app /app/data
 USER app
+
+COPY --from=prod-deps --chown=app:app /app/node_modules ./node_modules
+COPY --chown=app:app package.json ./
+COPY --from=build --chown=app:app /app/dist ./dist
 
 EXPOSE 4100
 VOLUME ["/app/data"]
