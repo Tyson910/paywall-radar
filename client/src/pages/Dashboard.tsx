@@ -67,10 +67,10 @@ function StatusPulse({ lastEventAt }: { lastEventAt: string | null }) {
   return (
     <Tile className="flex flex-col items-start justify-center gap-2">
       <div className="flex flex-row items-center">
-      <span className={`size-3 rounded-full ${color} mr-1.5 animate-pulse`} />
-      <p className="text-sm font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-        Status
-      </p>
+        <span className={`size-3 rounded-full ${color} mr-1.5 animate-pulse`} />
+        <p className="text-sm font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+          Status
+        </p>
       </div>
       <p className="text-2xl font-bold tracking-tight">{label}</p>
     </Tile>
