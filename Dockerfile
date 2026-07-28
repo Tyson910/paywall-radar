@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-# ---- base (debian slim — glibc, matches distroless runtime) -----------------
+# ---- base -------------------------------------------------------------------
 FROM node:22-slim AS base
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@10.14.0 --activate
@@ -31,28 +31,30 @@ COPY tsconfig.json tsconfig.typecheck.json ./
 RUN pnpm build && pnpm build:client
 
 
-# ---- fs prep (distroless has no shell, so set up data dir here) -------------
-FROM alpine:3 AS fs
-RUN mkdir -p /fs/data \
- && touch /fs/data/.keep \
- && chown -R 65532:65532 /fs
+# ---- litestream (copy static binary only) ------------------------------------
+FROM litestream/litestream:0.5.14-scratch AS litestream
 
 
-# ---- runtime (distroless — no shell, no npm, no package manager) ------------
-FROM gcr.io/distroless/nodejs22-debian12:nonroot AS runtime
+# ---- runtime ----------------------------------------------------------------
+FROM node:22-slim AS runtime
 ENV NODE_ENV=production \
     PORT=4100 \
     DB_PATH=/app/data/paywall-radar.db \
     CLIENT_DIR=/app/dist/client
 WORKDIR /app
 
-COPY --from=prod-deps --chown=nonroot:nonroot /app/node_modules ./node_modules
-COPY --chown=nonroot:nonroot package.json ./
-COPY --from=build --chown=nonroot:nonroot /app/dist ./dist
-COPY --from=fs --chown=nonroot:nonroot /fs/data ./data
+RUN groupadd -r appuser && useradd -r -g appuser -d /app appuser \
+ && mkdir -p /app/data && chown appuser:appuser /app/data
 
-USER nonroot:nonroot
+COPY --from=prod-deps --chown=appuser:appuser /app/node_modules ./node_modules
+COPY --chown=appuser:appuser package.json ./
+COPY --from=build --chown=appuser:appuser /app/dist ./dist
+COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
+COPY --chown=appuser:appuser litestream.yml /etc/litestream.yml
+COPY --chown=appuser:appuser server/src/docker-entrypoint.sh /app/docker-entrypoint.sh
+
+USER appuser:appuser
 EXPOSE 4100
 VOLUME ["/app/data"]
 
-CMD ["dist/server/index.js"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

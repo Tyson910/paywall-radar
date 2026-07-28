@@ -1,0 +1,8 @@
+exec: /nodejs/bin/node /app/dist/server/index.js
+
+dbs:
+  - path: ${DB_PATH}
+    restore-if-db-not-exists: true
+    busy-timeout: 5s
+    replica:
+      url: ${LITESTREAM_REPLICA_URL}
