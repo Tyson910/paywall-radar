@@ -10,7 +10,7 @@
     "build": "pnpm run clean && tsc -b shared/tsconfig.build.json server/tsconfig.build.json && cp -R server/src/database/migrations dist/server/database/migrations",
     "build:client": "vite build --config client/vite.config.ts",
     "clean": "tsc -b --clean && rm -rf dist",
-    "dev": "tsx watch --env-file=.env server/src/index.ts",
+    "dev": "tsx watch --env-file=.env server/src/dev.ts",
     "dev:server": "tsx watch --env-file=.env server/src/index.ts",
     "db:generate": "drizzle-kit generate",
     "db:init": "tsx --env-file=.env server/src/scripts/initialize-database.ts",
