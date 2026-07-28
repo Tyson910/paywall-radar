@@ -67,6 +67,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
           ...signed,
           domain: result.action.domain,
           authorDid: result.authorDid,
+          postText: result.postText,
         });
 
         if (inserted) {

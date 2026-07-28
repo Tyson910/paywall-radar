@@ -57,6 +57,7 @@ describe("processJetstreamMessage", () => {
       cursorUs: 1_725_519_626_134_432,
       postUri: "at://did:plc:example/app.bsky.feed.post/3l3pte3p2e325",
       authorDid: "did:plc:example",
+      postText: "An article",
       action: { val: "paywall", domain: "nytimes.com" },
     });
   });

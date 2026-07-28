@@ -21,6 +21,7 @@ export const labels = sqliteTable(
     sig: blob({ mode: "buffer" }).notNull(),
     domain: text().notNull(),
     authorDid: text("author_did").notNull(),
+    postText: text("post_text"),
   },
   (table) => [index("labels_cts_idx").on(table.cts), index("labels_domain_idx").on(table.domain)],
 );

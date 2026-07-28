@@ -23,6 +23,16 @@ export const recentLabelSchema = z.object({
   createdAt: z.iso.datetime(),
 });
 
+export const monitoredDomainSchema = z.object({
+  pattern: z.string().min(1),
+  addedAt: z.iso.datetime(),
+});
+
+export const recentLabelsPageSchema = z.object({
+  labels: z.array(recentLabelSchema),
+  nextCursor: z.number().int().nullable(),
+});
+
 export const dashboardSnapshotSchema = z.object({
   stats: statsSummarySchema,
   volume: z.array(volumePointSchema),
@@ -115,4 +125,6 @@ export type StatsSummary = z.infer<typeof statsSummarySchema>;
 export type VolumePoint = z.infer<typeof volumePointSchema>;
 export type DomainCount = z.infer<typeof domainCountSchema>;
 export type RecentLabel = z.infer<typeof recentLabelSchema>;
+export type MonitoredDomain = z.infer<typeof monitoredDomainSchema>;
+export type RecentLabelsPage = z.infer<typeof recentLabelsPageSchema>;
 export type DashboardSnapshot = z.infer<typeof dashboardSnapshotSchema>;

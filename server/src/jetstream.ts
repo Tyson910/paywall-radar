@@ -14,6 +14,7 @@ export type JetstreamMessageResult =
       cursorUs: number;
       postUri: string;
       authorDid: string;
+      postText: string;
       action: LabelAction | null;
     };
 
@@ -72,6 +73,7 @@ export function processJetstreamMessage(
     cursorUs: event.data.time_us,
     postUri,
     authorDid: event.data.did,
+    postText: event.data.commit.record.text,
     action: processPost(event.data.commit.record, patterns),
   };
 }

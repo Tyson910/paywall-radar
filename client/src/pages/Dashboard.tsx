@@ -1,10 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
+import { useCallback, useSyncExternalStore } from "react";
 
-import type { RecentLabel, StatsSummary, VolumePoint } from "#shared/schemas.js";
+import type { StatsSummary, VolumePoint } from "#shared/schemas.js";
 
-import { dashboardQueryOptions } from "../api.js";
-import { blueskyPostUrl } from "../bluesky.js";
+import { dashboardQueryOptions, domainsQueryOptions } from "../api.js";
+import { DomainsMonitored } from "../components/DomainsMonitored.js";
 import { QueryGuard } from "../components/QueryGuard.js";
+import { RecentLabels } from "../components/RecentLabels.js";
 import { Skeleton } from "../components/Skeleton.js";
 import { TopDomains } from "../components/TopDomains.js";
 import { VolumeChart } from "../components/VolumeChart.js";
@@ -21,6 +23,37 @@ function formatRelativeTime(iso: string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
+}
+
+function subscribeToLocation(callback: () => void) {
+  window.addEventListener("popstate", callback);
+  return () => window.removeEventListener("popstate", callback);
+}
+
+function getLocationSearch() {
+  return window.location.search;
+}
+
+function useDomainFilter() {
+  const search = useSyncExternalStore(subscribeToLocation, getLocationSearch);
+  const domain = new URLSearchParams(search).get("domain") ?? undefined;
+
+  const setDomain = useCallback((d: string) => {
+    const next = new URLSearchParams(window.location.search);
+    next.set("domain", d);
+    window.history.pushState({}, "", `?${next.toString()}`);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+
+  const clearDomain = useCallback(() => {
+    const next = new URLSearchParams(window.location.search);
+    next.delete("domain");
+    const qs = next.toString();
+    window.history.pushState({}, "", qs ? `?${qs}` : window.location.pathname);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, []);
+
+  return { domain, setDomain, clearDomain };
 }
 
 function Tile({ children, className = "" }: { children: React.ReactNode; className?: string }) {
@@ -78,82 +111,6 @@ function StatusPulse({ lastEventAt }: { lastEventAt: string | null }) {
   );
 }
 
-function PeakHour({ volume }: { volume: VolumePoint[] }) {
-  if (volume.length === 0) {
-    return (
-      <Tile className="flex flex-col items-center justify-center text-center">
-        <p className="text-sm font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-          Peak hour
-        </p>
-        <p className="mt-2 text-2xl font-bold tracking-tight text-neutral-300 dark:text-neutral-600">
-          —
-        </p>
-      </Tile>
-    );
-  }
-
-  const peak = volume.reduce((max, p) => (p.labels > max.labels ? p : max), volume[0]!);
-  const hour = new Date(peak.hour).toLocaleTimeString(undefined, {
-    hour: "numeric",
-    hour12: true,
-  });
-
-  return (
-    <Tile className="flex flex-col items-center justify-center text-center">
-      <p className="text-sm font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-        Peak hour
-      </p>
-      <p className="mt-2 text-4xl font-bold tracking-tight sm:text-5xl">{hour}</p>
-      <p className="mt-1 text-sm tabular-nums text-neutral-500 dark:text-neutral-400">
-        {peak.labels.toLocaleString()} labels
-      </p>
-    </Tile>
-  );
-}
-
-function RecentLabels({ labels }: { labels: RecentLabel[] }) {
-  if (labels.length === 0) {
-    return (
-      <div className="flex h-32 items-center justify-center text-neutral-400 dark:text-neutral-500">
-        No posts labeled yet
-      </div>
-    );
-  }
-
-  return (
-    <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
-      {labels.map((label) => {
-        const postUrl = blueskyPostUrl(label.authorDid, label.uri);
-
-        return (
-          <a
-            key={label.uri}
-            href={postUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
-          >
-            <div className="min-w-0">
-              <p className="truncate font-medium text-neutral-800 group-hover:text-blue-600 dark:text-neutral-200 dark:group-hover:text-blue-400">
-                {label.domain}
-              </p>
-              <p className="mt-0.5 text-sm text-neutral-400 dark:text-neutral-500">
-                {formatRelativeTime(label.createdAt)}
-              </p>
-            </div>
-            <span
-              aria-hidden="true"
-              className="text-lg text-neutral-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-500 dark:text-neutral-600"
-            >
-              ↗
-            </span>
-          </a>
-        );
-      })}
-    </div>
-  );
-}
-
 function BentoSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -173,13 +130,19 @@ function DashboardContent({
   stats,
   volume,
   topDomains,
-  recentLabels,
+  domain,
+  onDomainClick,
+  onClearFilter,
 }: {
   stats: StatsSummary;
   volume: VolumePoint[];
   topDomains: { domain: string; labels: number }[];
-  recentLabels: RecentLabel[];
+  domain?: string;
+  onDomainClick: (domain: string) => void;
+  onClearFilter: () => void;
 }) {
+  const domainsQuery = useQuery(domainsQueryOptions());
+
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
       <StatTile label="Posts scanned" value={formatCount(stats.postsScanned)} />
@@ -200,20 +163,28 @@ function DashboardContent({
       />
       <StatusPulse lastEventAt={stats.lastEventAt} />
 
-      <Tile className="lg:col-span-3">
+      <Tile className="lg:col-span-full">
         <p className="mb-3 text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
           Top paywalled domains
         </p>
-        <TopDomains data={topDomains} />
+        <TopDomains data={topDomains} onDomainClick={onDomainClick} />
       </Tile>
 
-      <PeakHour volume={volume} />
+      <Tile className="lg:col-span-4">
+        {domainsQuery.isSuccess ? (
+          <DomainsMonitored data={domainsQuery.data} onDomainClick={onDomainClick} />
+        ) : (
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+              Domains monitored
+            </p>
+            <Skeleton className="mt-2 h-12 w-20 rounded" />
+          </div>
+        )}
+      </Tile>
 
       <Tile className="lg:col-span-4">
-        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-          Recently labeled posts
-        </p>
-        <RecentLabels labels={recentLabels} />
+        <RecentLabels domain={domain} onClearFilter={onClearFilter} />
       </Tile>
     </div>
   );
@@ -221,6 +192,7 @@ function DashboardContent({
 
 export function Dashboard() {
   const query = useQuery(dashboardQueryOptions());
+  const { domain, setDomain, clearDomain } = useDomainFilter();
 
   return (
     <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900">
@@ -239,7 +211,9 @@ export function Dashboard() {
               stats={data.stats}
               volume={data.volume}
               topDomains={data.topDomains}
-              recentLabels={data.recentLabels}
+              domain={domain}
+              onDomainClick={setDomain}
+              onClearFilter={clearDomain}
             />
           )}
         </QueryGuard>

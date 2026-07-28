@@ -3,7 +3,13 @@ import type { DomainCount } from "#shared/schemas.js";
 const BAR_COLOR_LIGHT = "#2a78d6";
 const BAR_COLOR_DARK = "#3987e5";
 
-export function TopDomains({ data }: { data: DomainCount[] }) {
+export function TopDomains({
+  data,
+  onDomainClick,
+}: {
+  data: DomainCount[];
+  onDomainClick?: (domain: string) => void;
+}) {
   if (data.length === 0) {
     return (
       <div className="flex h-32 items-center justify-center text-neutral-400 dark:text-neutral-500">
@@ -17,7 +23,12 @@ export function TopDomains({ data }: { data: DomainCount[] }) {
   return (
     <div className="space-y-3">
       {data.map((entry) => (
-        <div key={entry.domain}>
+        <button
+          key={entry.domain}
+          type="button"
+          className="block w-full text-left hover:opacity-80"
+          onClick={() => onDomainClick?.(entry.domain)}
+        >
           <div className="mb-1 flex items-baseline justify-between text-sm">
             <span className="text-neutral-700 dark:text-neutral-300">{entry.domain}</span>
             <span className="font-medium tabular-nums">{entry.labels.toLocaleString()}</span>
@@ -31,7 +42,7 @@ export function TopDomains({ data }: { data: DomainCount[] }) {
               }}
             />
           </div>
-        </div>
+        </button>
       ))}
       <style>{`
         @media (prefers-color-scheme: dark) {

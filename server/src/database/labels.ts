@@ -13,6 +13,7 @@ export interface LabelRecord {
   sig: Uint8Array;
   domain: string;
   authorDid: string;
+  postText?: string | null;
 }
 
 export async function recordLabel(
@@ -32,6 +33,7 @@ export async function recordLabel(
       sig: Buffer.from(label.sig),
       domain: label.domain,
       authorDid: label.authorDid,
+      postText: label.postText ?? null,
     })
     .onConflictDoNothing({ target: labels.uri })
     .returning({ id: labels.id });
