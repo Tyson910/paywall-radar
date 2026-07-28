@@ -10,15 +10,13 @@ WORKDIR /app
 # ---- deps (full install, including devDeps needed for the build) ------------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=cacheKey-pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile
 
 
 # ---- prod deps (runtime deps only) ------------------------------------------
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=cacheKey-pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile --prod
+RUN pnpm install --frozen-lockfile --prod
 
 
 # ---- build ------------------------------------------------------------------
