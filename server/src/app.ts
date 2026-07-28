@@ -97,7 +97,7 @@ export function createApp({ db, labelStream, clientDir }: AppOptions): Hono {
     if (existsSync(root)) {
       app.use("/*", serveStatic({ root: clientDir }));
       app.get("/", serveStatic({ root: clientDir, path: "index.html" }));
-      app.get("/dashboard", serveStatic({ root: clientDir, path: "dashboard.html" }));
+      app.get("/dashboard", serveStatic({ root: clientDir, path: "index.html" }));
     } else {
       console.warn(`Static file directory not found: ${root} — skipping static serving`);
     }

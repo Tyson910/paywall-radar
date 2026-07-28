@@ -36,7 +36,7 @@ async function main() {
       middlewareMode: true,
       ws: { port: port + 1 },
     },
-    appType: "mpa",
+    appType: "spa",
   });
 
   const createDevelopmentServer = ((options: ServerOptions, honoListener: RequestListener) =>

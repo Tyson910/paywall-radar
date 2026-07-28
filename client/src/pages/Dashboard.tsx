@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useCallback, useSyncExternalStore } from "react";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 
 import type { StatsSummary, VolumePoint } from "#shared/schemas.js";
 
@@ -25,33 +25,17 @@ function formatRelativeTime(iso: string): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
-function subscribeToLocation(callback: () => void) {
-  window.addEventListener("popstate", callback);
-  return () => window.removeEventListener("popstate", callback);
-}
-
-function getLocationSearch() {
-  return window.location.search;
-}
-
 function useDomainFilter() {
-  const search = useSyncExternalStore(subscribeToLocation, getLocationSearch);
-  const domain = new URLSearchParams(search).get("domain") ?? undefined;
+  const { domain } = useSearch({ from: "/dashboard" });
+  const navigate = useNavigate({ from: "/dashboard" });
 
-  const setDomain = useCallback((d: string) => {
-    const next = new URLSearchParams(window.location.search);
-    next.set("domain", d);
-    window.history.pushState({}, "", `?${next.toString()}`);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }, []);
+  const setDomain = (nextDomain: string) => {
+    void navigate({ search: { domain: nextDomain } });
+  };
 
-  const clearDomain = useCallback(() => {
-    const next = new URLSearchParams(window.location.search);
-    next.delete("domain");
-    const qs = next.toString();
-    window.history.pushState({}, "", qs ? `?${qs}` : window.location.pathname);
-    window.dispatchEvent(new PopStateEvent("popstate"));
-  }, []);
+  const clearDomain = () => {
+    void navigate({ search: {} });
+  };
 
   return { domain, setDomain, clearDomain };
 }

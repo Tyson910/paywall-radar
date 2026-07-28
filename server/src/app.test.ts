@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -46,5 +46,22 @@ describe("createApp", () => {
         lastEventAt: null,
       },
     });
+  });
+
+  it("serves the client entry for direct application routes", async () => {
+    const clientDir = join(directory, "client");
+    await mkdir(clientDir);
+    await writeFile(join(clientDir, "index.html"), '<div id="root"></div>');
+    const app = createApp({ db, labelStream: new LabelStream(), clientDir });
+
+    const [homeResponse, dashboardResponse] = await Promise.all([
+      app.request("/"),
+      app.request("/dashboard"),
+    ]);
+
+    expect(homeResponse.status).toBe(200);
+    expect(dashboardResponse.status).toBe(200);
+    await expect(homeResponse.text()).resolves.toContain('id="root"');
+    await expect(dashboardResponse.text()).resolves.toContain('id="root"');
   });
 });

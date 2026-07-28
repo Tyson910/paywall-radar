@@ -25,7 +25,6 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         main: fileURLToPath(new URL("index.html", import.meta.url)),
-        dashboard: fileURLToPath(new URL("dashboard.html", import.meta.url)),
       },
     },
   },
