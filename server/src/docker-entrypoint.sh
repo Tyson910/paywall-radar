@@ -1,8 +1,20 @@
 #!/bin/sh
 set -e
 
+run_as_appuser() {
+  if [ "$(id -u)" -eq 0 ]; then
+    exec runuser -u appuser -- "$@"
+  fi
+
+  exec "$@"
+}
+
+if [ "$(id -u)" -eq 0 ]; then
+  chown -R appuser:appuser /app/data
+fi
+
 if [ -n "$LITESTREAM_REPLICA_URL" ]; then
-  exec /usr/local/bin/litestream replicate -config /etc/litestream.yml
+  run_as_appuser /usr/local/bin/litestream replicate -config /etc/litestream.yml
 else
-  exec node /app/dist/server/index.js
+  run_as_appuser node /app/dist/server/index.js
 fi

@@ -51,7 +51,6 @@ COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
 COPY --chown=appuser:appuser litestream.yml /etc/litestream.yml
 COPY --chown=appuser:appuser server/src/docker-entrypoint.sh /app/docker-entrypoint.sh
 
-USER appuser:appuser
 EXPOSE 4100
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
