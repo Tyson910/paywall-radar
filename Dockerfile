@@ -10,14 +10,14 @@ WORKDIR /app
 # ---- deps (full install, including devDeps needed for the build) ------------
 FROM base AS deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=cacheKey-pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 
 
 # ---- prod deps (runtime deps only) ------------------------------------------
 FROM base AS prod-deps
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=cacheKey-pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile --prod
 
 
@@ -55,6 +55,5 @@ COPY --chown=appuser:appuser server/src/docker-entrypoint.sh /app/docker-entrypo
 
 USER appuser:appuser
 EXPOSE 4100
-VOLUME ["/app/data"]
 
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
