@@ -1,4 +1,4 @@
-exec: /nodejs/bin/node /app/dist/server/index.js
+exec: /usr/local/bin/node /app/dist/server/index.js
 
 dbs:
   - path: ${DB_PATH}
