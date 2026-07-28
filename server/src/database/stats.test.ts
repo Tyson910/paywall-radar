@@ -51,6 +51,7 @@ describe("getDashboardSnapshot", () => {
     });
     expect(snapshot.volume).toEqual([]);
     expect(snapshot.topDomains).toEqual([]);
+    expect(snapshot.recentLabels).toEqual([]);
   });
 
   it("reflects recorded labels in stats, volume, and top domains", async () => {
@@ -97,6 +98,33 @@ describe("getDashboardSnapshot", () => {
     expect(snapshot.topDomains).toEqual([
       { domain: "nytimes.com", labels: 3 },
       { domain: "wsj.com", labels: 1 },
+    ]);
+
+    expect(snapshot.recentLabels).toEqual([
+      {
+        uri: "at://did:plc:d/app.bsky.feed.post/4",
+        authorDid: "did:plc:d",
+        domain: "nytimes.com",
+        createdAt: now.toISOString(),
+      },
+      {
+        uri: "at://did:plc:c/app.bsky.feed.post/3",
+        authorDid: "did:plc:c",
+        domain: "wsj.com",
+        createdAt: oneHourAgo.toISOString(),
+      },
+      {
+        uri: "at://did:plc:b/app.bsky.feed.post/2",
+        authorDid: "did:plc:b",
+        domain: "nytimes.com",
+        createdAt: twoHoursAgo.toISOString(),
+      },
+      {
+        uri: "at://did:plc:a/app.bsky.feed.post/1",
+        authorDid: "did:plc:a",
+        domain: "nytimes.com",
+        createdAt: twoHoursAgo.toISOString(),
+      },
     ]);
 
     expect(snapshot.volume.length).toBeGreaterThanOrEqual(2);

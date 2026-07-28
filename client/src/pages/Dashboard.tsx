@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 
-import type { StatsSummary, VolumePoint } from "#shared/schemas.js";
+import type { RecentLabel, StatsSummary, VolumePoint } from "#shared/schemas.js";
 
 import { dashboardQueryOptions } from "../api.js";
 import { QueryGuard } from "../components/QueryGuard.js";
@@ -110,6 +110,50 @@ function PeakHour({ volume }: { volume: VolumePoint[] }) {
   );
 }
 
+function RecentLabels({ labels }: { labels: RecentLabel[] }) {
+  if (labels.length === 0) {
+    return (
+      <div className="flex h-32 items-center justify-center text-neutral-400 dark:text-neutral-500">
+        No posts labeled yet
+      </div>
+    );
+  }
+
+  return (
+    <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
+      {labels.map((label) => {
+        const rkey = label.uri.split("/").at(-1);
+        const postUrl = `https://bsky.app/profile/${encodeURIComponent(label.authorDid)}/post/${encodeURIComponent(rkey ?? "")}`;
+
+        return (
+          <a
+            key={label.uri}
+            href={postUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group flex items-center justify-between gap-4 py-3 first:pt-0 last:pb-0"
+          >
+            <div className="min-w-0">
+              <p className="truncate font-medium text-neutral-800 group-hover:text-blue-600 dark:text-neutral-200 dark:group-hover:text-blue-400">
+                {label.domain}
+              </p>
+              <p className="mt-0.5 text-sm text-neutral-400 dark:text-neutral-500">
+                {formatRelativeTime(label.createdAt)}
+              </p>
+            </div>
+            <span
+              aria-hidden="true"
+              className="text-lg text-neutral-300 transition-transform group-hover:translate-x-0.5 group-hover:text-blue-500 dark:text-neutral-600"
+            >
+              ↗
+            </span>
+          </a>
+        );
+      })}
+    </div>
+  );
+}
+
 function BentoSkeleton() {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -120,6 +164,7 @@ function BentoSkeleton() {
       <Skeleton className="h-32 rounded-2xl" />
       <Skeleton className="h-40 rounded-2xl lg:col-span-3" />
       <Skeleton className="h-40 rounded-2xl" />
+      <Skeleton className="h-64 rounded-2xl lg:col-span-4" />
     </div>
   );
 }
@@ -128,10 +173,12 @@ function DashboardContent({
   stats,
   volume,
   topDomains,
+  recentLabels,
 }: {
   stats: StatsSummary;
   volume: VolumePoint[];
   topDomains: { domain: string; labels: number }[];
+  recentLabels: RecentLabel[];
 }) {
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-4">
@@ -161,6 +208,13 @@ function DashboardContent({
       </Tile>
 
       <PeakHour volume={volume} />
+
+      <Tile className="lg:col-span-4">
+        <p className="mb-3 text-xs font-medium uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+          Recently labeled posts
+        </p>
+        <RecentLabels labels={recentLabels} />
+      </Tile>
     </div>
   );
 }
@@ -185,6 +239,7 @@ export function Dashboard() {
               stats={data.stats}
               volume={data.volume}
               topDomains={data.topDomains}
+              recentLabels={data.recentLabels}
             />
           )}
         </QueryGuard>

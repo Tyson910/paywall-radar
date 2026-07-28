@@ -7,13 +7,14 @@ import type { Database } from "./connection.js";
 import { cursor, labels } from "./models.js";
 
 export async function getDashboardSnapshot(db: Database): Promise<DashboardSnapshot> {
-  const [stats, volume, topDomains] = await Promise.all([
+  const [stats, volume, topDomains, recentLabels] = await Promise.all([
     getStatsSummary(db),
     getHourlyVolume(db),
     getTopDomains(db),
+    getRecentLabels(db),
   ]);
 
-  return { stats, volume, topDomains };
+  return { stats, volume, topDomains, recentLabels };
 }
 
 async function getStatsSummary(db: Database) {
@@ -60,4 +61,19 @@ async function getTopDomains(db: Database) {
     .orderBy(desc(count()));
 
   return rows.map((row) => ({ domain: row.domain, labels: row.labels }));
+}
+
+async function getRecentLabels(db: Database) {
+  const rows = await db
+    .select({
+      uri: labels.uri,
+      authorDid: labels.authorDid,
+      domain: labels.domain,
+      createdAt: labels.cts,
+    })
+    .from(labels)
+    .orderBy(desc(labels.cts), desc(labels.id))
+    .limit(10);
+
+  return rows;
 }

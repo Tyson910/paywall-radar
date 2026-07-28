@@ -11,6 +11,14 @@ describe("dashboardSnapshotSchema", () => {
     },
     volume: [{ hour: "2026-07-25T04:00:00.000Z", labels: 4 }],
     topDomains: [{ domain: "example.com", labels: 4 }],
+    recentLabels: [
+      {
+        uri: "at://did:plc:author/app.bsky.feed.post/example",
+        authorDid: "did:plc:author",
+        domain: "example.com",
+        createdAt: "2026-07-25T04:00:00.000Z",
+      },
+    ],
   };
 
   it("accepts a valid dashboard snapshot", () => {

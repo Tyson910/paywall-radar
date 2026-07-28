@@ -16,10 +16,18 @@ export const domainCountSchema = z.object({
   labels: z.number().int().nonnegative(),
 });
 
+export const recentLabelSchema = z.object({
+  uri: z.string().startsWith("at://"),
+  authorDid: z.string().startsWith("did:"),
+  domain: z.string().min(1),
+  createdAt: z.iso.datetime(),
+});
+
 export const dashboardSnapshotSchema = z.object({
   stats: statsSummarySchema,
   volume: z.array(volumePointSchema),
   topDomains: z.array(domainCountSchema),
+  recentLabels: z.array(recentLabelSchema),
 });
 
 const uriFeatureSchema = z.object({
@@ -106,4 +114,5 @@ export type JetstreamPostEvent = z.infer<typeof jetstreamPostEventSchema>;
 export type StatsSummary = z.infer<typeof statsSummarySchema>;
 export type VolumePoint = z.infer<typeof volumePointSchema>;
 export type DomainCount = z.infer<typeof domainCountSchema>;
+export type RecentLabel = z.infer<typeof recentLabelSchema>;
 export type DashboardSnapshot = z.infer<typeof dashboardSnapshotSchema>;
