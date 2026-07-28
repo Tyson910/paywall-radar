@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { RecentLabel, StatsSummary, VolumePoint } from "#shared/schemas.js";
 
 import { dashboardQueryOptions } from "../api.js";
+import { blueskyPostUrl } from "../bluesky.js";
 import { QueryGuard } from "../components/QueryGuard.js";
 import { Skeleton } from "../components/Skeleton.js";
 import { TopDomains } from "../components/TopDomains.js";
@@ -122,8 +123,7 @@ function RecentLabels({ labels }: { labels: RecentLabel[] }) {
   return (
     <div className="divide-y divide-neutral-100 dark:divide-neutral-700">
       {labels.map((label) => {
-        const rkey = label.uri.split("/").at(-1);
-        const postUrl = `https://bsky.app/profile/${encodeURIComponent(label.authorDid)}/post/${encodeURIComponent(rkey ?? "")}`;
+        const postUrl = blueskyPostUrl(label.authorDid, label.uri);
 
         return (
           <a
