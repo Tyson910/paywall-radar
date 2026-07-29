@@ -31,13 +31,6 @@ export function Home() {
       <div className="mt-12">
         <LiveStats />
       </div>
-
-      <Link
-        to="/login"
-        className="mt-10 inline-block text-sm text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
-      >
-        Domain administration
-      </Link>
     </main>
   );
 }
