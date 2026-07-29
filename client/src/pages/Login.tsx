@@ -12,9 +12,9 @@ const errorMessages: Record<string, string> = {
 export function Login() {
   const { error } = useSearch({ from: "/login" });
   const session = useQuery(sessionQueryOptions());
-  const [handle, setHandle] = useState("");
+  const [username, setUsername] = useState("");
   const login = useMutation({
-    mutationFn: () => beginLogin(handle),
+    mutationFn: () => beginLogin(`${username.trim().toLowerCase()}.bsky.social`),
     onSuccess: ({ redirectUrl }) => window.location.assign(redirectUrl),
   });
 
@@ -50,15 +50,23 @@ export function Login() {
           }}
         >
           <label className="block">
-            <span className="text-sm font-medium">Bluesky handle</span>
-            <input
-              value={handle}
-              onChange={(event) => setHandle(event.target.value)}
-              placeholder="you.bsky.social"
-              autoComplete="username"
-              required
-              className="mt-2 w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 outline-none focus:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900"
-            />
+            <span className="text-sm font-medium">Bluesky username</span>
+            <span className="mt-2 flex overflow-hidden rounded-lg border border-neutral-300 bg-white focus-within:border-blue-500 dark:border-neutral-700 dark:bg-neutral-900">
+              <input
+                value={username}
+                onChange={(event) => setUsername(event.target.value)}
+                autoComplete="username"
+                autoCapitalize="none"
+                spellCheck={false}
+                pattern="[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+                maxLength={63}
+                required
+                className="min-w-0 flex-1 bg-transparent px-4 py-3 outline-none"
+              />
+              <span className="flex items-center border-l border-neutral-200 bg-neutral-50 px-3 text-neutral-500 dark:border-neutral-700 dark:bg-neutral-800">
+                .bsky.social
+              </span>
+            </span>
           </label>
           <button
             type="submit"
