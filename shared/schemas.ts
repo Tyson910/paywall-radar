@@ -21,7 +21,7 @@ export const recentLabelSchema = z.object({
   authorDid: z.string().startsWith("did:"),
   domain: z.string().min(1),
   createdAt: z.iso.datetime(),
-  postText: z.string().nullable().optional(),
+  postText: z.string().nullable(),
 });
 
 export const monitoredDomainSchema = z.object({

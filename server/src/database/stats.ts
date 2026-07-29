@@ -47,7 +47,7 @@ async function getHourlyVolume(db: Database) {
     .groupBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labels.cts})`)
     .orderBy(sql`strftime('%Y-%m-%dT%H:00:00.000Z', ${labels.cts})`);
 
-  return rows.map((row) => ({ hour: row.hour, labels: row.labels }));
+  return rows;
 }
 
 function apexDomain(hostname: string): string {
@@ -88,10 +88,7 @@ async function getRecentLabels(db: Database) {
     .orderBy(desc(labels.cts), desc(labels.id))
     .limit(10);
 
-  return rows.map(({ postText, ...row }) => ({
-    ...row,
-    ...(postText != null ? { postText } : {}),
-  }));
+  return rows;
 }
 
 export async function getMonitoredDomains(db: Database): Promise<MonitoredDomain[]> {
@@ -132,10 +129,7 @@ export async function getRecentLabelsPage(
   const nextCursor = hasMore ? page[page.length - 1]!.id : null;
 
   return {
-    labels: page.map(({ id: _, postText, ...rest }) => ({
-      ...rest,
-      ...(postText != null ? { postText } : {}),
-    })),
+    labels: page.map(({ id: _, ...label }) => label),
     nextCursor,
   };
 }

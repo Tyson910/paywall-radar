@@ -106,24 +106,28 @@ describe("getDashboardSnapshot", () => {
         authorDid: "did:plc:d",
         domain: "nytimes.com",
         createdAt: now.toISOString(),
+        postText: null,
       },
       {
         uri: "at://did:plc:c/app.bsky.feed.post/3",
         authorDid: "did:plc:c",
         domain: "wsj.com",
         createdAt: oneHourAgo.toISOString(),
+        postText: null,
       },
       {
         uri: "at://did:plc:b/app.bsky.feed.post/2",
         authorDid: "did:plc:b",
         domain: "nytimes.com",
         createdAt: twoHoursAgo.toISOString(),
+        postText: null,
       },
       {
         uri: "at://did:plc:a/app.bsky.feed.post/1",
         authorDid: "did:plc:a",
         domain: "nytimes.com",
         createdAt: twoHoursAgo.toISOString(),
+        postText: null,
       },
     ]);
 

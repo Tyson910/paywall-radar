@@ -17,6 +17,7 @@ describe("dashboardSnapshotSchema", () => {
         authorDid: "did:plc:author",
         domain: "example.com",
         createdAt: "2026-07-25T04:00:00.000Z",
+        postText: null,
       },
     ],
   };
