@@ -1,3 +1,5 @@
+import type { NodeSavedSession, NodeSavedState } from "@atproto/oauth-client-node";
+
 import { sql } from "drizzle-orm";
 import { blob, check, index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
@@ -38,13 +40,13 @@ export const cursor = sqliteTable(
 
 export const oauthState = sqliteTable("oauth_state", {
   key: text().primaryKey(),
-  value: text().notNull(),
+  value: text({ mode: "json" }).$type<NodeSavedState>().notNull(),
   updatedAt: text("updated_at").notNull(),
 });
 
 export const oauthSessions = sqliteTable("oauth_sessions", {
   did: text().primaryKey(),
-  value: text().notNull(),
+  value: text({ mode: "json" }).$type<NodeSavedSession>().notNull(),
   updatedAt: text("updated_at").notNull(),
 });
 
