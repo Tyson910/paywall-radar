@@ -10,15 +10,6 @@ import { WebSocketServer } from "ws";
 
 import { startRuntime } from "./runtime.js";
 
-const did = process.env.DID;
-const signingKey = process.env.SIGNING_KEY;
-const dbPath = process.env.DB_PATH ?? "paywall-radar.db";
-const port = Number(process.env.PORT ?? 4100);
-const adminDid = process.env.ADMIN_DID;
-const sessionSecret = process.env.SESSION_SECRET;
-const publicUrl = process.env.PUBLIC_URL ?? `http://127.0.0.1:${port}`;
-const oauthPrivateKey = process.env.OAUTH_PRIVATE_KEY;
-
 function isBackendRequest(pathname: string | undefined): boolean {
   return (
     pathname === "/api" ||
@@ -33,26 +24,12 @@ function isBackendRequest(pathname: string | undefined): boolean {
 }
 
 async function main() {
-  if (!did || !signingKey || !adminDid || !sessionSecret) {
-    throw new Error(
-      "DID, SIGNING_KEY, ADMIN_DID, and SESSION_SECRET environment variables are required",
-    );
-  }
-
-  const runtime = await startRuntime({
-    did,
-    signingKey,
-    dbPath,
-    adminDid,
-    publicUrl,
-    sessionSecret,
-    ...(oauthPrivateKey ? { oauthPrivateKey } : {}),
-  });
+  const runtime = await startRuntime();
   const vite = await createViteServer({
     configFile: "client/vite.config.ts",
     server: {
       middlewareMode: true,
-      ws: { port: port + 1 },
+      ws: { port: runtime.port + 1 },
     },
     appType: "spa",
   });
@@ -80,7 +57,7 @@ async function main() {
   const server = serve(
     {
       fetch: runtime.app.fetch,
-      port,
+      port: runtime.port,
       createServer: createDevelopmentServer,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       websocket: { server: webSocketServer as any },

@@ -8,27 +8,19 @@ import { openDatabase } from "./database/connection.js";
 import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
 import { loadCursorState, loadDomainPatterns, saveCursorState } from "./database/state.js";
+import { loadRuntimeEnv } from "./env.js";
 import { startJetstreamConsumer } from "./jetstream-consumer.js";
 import { LabelStream } from "./label-stream.js";
 import { loadSigningKey, signLabel } from "./labeler.js";
 
-export interface RuntimeOptions {
-  did: string;
-  signingKey: string;
-  dbPath: string;
-  clientDir?: string;
-  adminDid: string;
-  publicUrl: string;
-  sessionSecret: string;
-  oauthPrivateKey?: string;
-}
-
 export interface Runtime {
   app: ReturnType<typeof createApp>;
+  port: number;
   stop(): Promise<void>;
 }
 
-export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
+export async function startRuntime(): Promise<Runtime> {
+  const options = loadRuntimeEnv();
   const { domainCount } = await initializeDatabase(options.dbPath);
   console.log(`Database initialized with ${domainCount} domain patterns`);
 
@@ -93,6 +85,7 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     let stopped = false;
     return {
       app,
+      port: options.port,
       stop: async () => {
         if (stopped) return;
         stopped = true;
