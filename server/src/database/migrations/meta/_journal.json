@@ -15,6 +15,13 @@
       "when": 1785261486728,
       "tag": "0001_remarkable_slyde",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785281084740,
+      "tag": "0002_deep_goliath",
+      "breakpoints": true
     }
   ]
 }

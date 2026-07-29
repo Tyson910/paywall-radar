@@ -16,6 +16,8 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": "http://localhost:4100",
+      "/oauth": "http://localhost:4100",
+      "/.well-known": "http://localhost:4100",
       "/xrpc": "http://localhost:4100",
     },
   },

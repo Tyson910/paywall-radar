@@ -5,13 +5,16 @@ import {
   createRouter,
   lazyRouteComponent,
   Outlet,
+  redirect,
   RouterProvider,
 } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
 import "./app.css";
+import { adminDomainsQueryOptions, sessionQueryOptions } from "./api.js";
 import { Home } from "./pages/Home.js";
+import { Login } from "./pages/Login.js";
 
 const queryClient = new QueryClient();
 
@@ -38,7 +41,27 @@ const dashboardRoute = createRoute({
   component: lazyRouteComponent(() => import("./pages/Dashboard.js"), "Dashboard"),
 });
 
-const routeTree = rootRoute.addChildren([homeRoute, dashboardRoute]);
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  validateSearch: (search: Record<string, unknown>): { error?: string } => {
+    return typeof search.error === "string" ? { error: search.error } : {};
+  },
+  component: Login,
+});
+
+const adminDomainsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/admin/domains",
+  beforeLoad: async ({ context }) => {
+    const session = await context.queryClient.ensureQueryData(sessionQueryOptions());
+    if (!session.authenticated) throw redirect({ to: "/login" });
+  },
+  loader: ({ context }) => context.queryClient.ensureQueryData(adminDomainsQueryOptions()),
+  component: lazyRouteComponent(() => import("./pages/DomainAdmin.js"), "DomainAdmin"),
+});
+
+const routeTree = rootRoute.addChildren([homeRoute, dashboardRoute, loginRoute, adminDomainsRoute]);
 const router = createRouter({
   routeTree,
   context: { queryClient },

@@ -36,6 +36,18 @@ export const cursor = sqliteTable(
   (table) => [check("cursor_single_row_check", sql`${table.id} = 1`)],
 );
 
+export const oauthState = sqliteTable("oauth_state", {
+  key: text().primaryKey(),
+  value: text().notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
+export const oauthSessions = sqliteTable("oauth_sessions", {
+  did: text().primaryKey(),
+  value: text().notNull(),
+  updatedAt: text("updated_at").notNull(),
+});
+
 export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
 export type LabelRow = typeof labels.$inferSelect;

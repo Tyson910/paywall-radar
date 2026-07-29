@@ -14,22 +14,40 @@ const did = process.env.DID;
 const signingKey = process.env.SIGNING_KEY;
 const dbPath = process.env.DB_PATH ?? "paywall-radar.db";
 const port = Number(process.env.PORT ?? 4100);
+const adminDid = process.env.ADMIN_DID;
+const sessionSecret = process.env.SESSION_SECRET;
+const publicUrl = process.env.PUBLIC_URL ?? `http://127.0.0.1:${port}`;
+const oauthPrivateKey = process.env.OAUTH_PRIVATE_KEY;
 
 function isBackendRequest(pathname: string | undefined): boolean {
   return (
     pathname === "/api" ||
     pathname?.startsWith("/api/") === true ||
+    pathname === "/oauth" ||
+    pathname?.startsWith("/oauth/") === true ||
+    pathname === "/.well-known" ||
+    pathname?.startsWith("/.well-known/") === true ||
     pathname === "/xrpc" ||
     pathname?.startsWith("/xrpc/") === true
   );
 }
 
 async function main() {
-  if (!did || !signingKey) {
-    throw new Error("DID and SIGNING_KEY environment variables are required");
+  if (!did || !signingKey || !adminDid || !sessionSecret) {
+    throw new Error(
+      "DID, SIGNING_KEY, ADMIN_DID, and SESSION_SECRET environment variables are required",
+    );
   }
 
-  const runtime = await startRuntime({ did, signingKey, dbPath });
+  const runtime = await startRuntime({
+    did,
+    signingKey,
+    dbPath,
+    adminDid,
+    publicUrl,
+    sessionSecret,
+    ...(oauthPrivateKey ? { oauthPrivateKey } : {}),
+  });
   const vite = await createViteServer({
     configFile: "client/vite.config.ts",
     server: {

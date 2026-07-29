@@ -8,11 +8,15 @@ import { serveStatic } from "@hono/node-server/serve-static";
 import { gt } from "drizzle-orm";
 import { Hono } from "hono";
 
+import type { AuthService } from "./auth.js";
 import type { Database } from "./database/connection.js";
 import type { LabelRow } from "./database/models.js";
+import type { DomainPattern } from "./domains.js";
 import type { LabelStream } from "./label-stream.js";
 import type { SignedLabel } from "./labeler.js";
 
+import { createAdminRoutes } from "./admin-routes.js";
+import { createAuthRoutes } from "./auth-routes.js";
 import { labels } from "./database/models.js";
 import { formatLabelForHttp, encodeLabelsFrame } from "./labeler.js";
 import { createDashboardRoutes } from "./routes.js";
@@ -21,6 +25,8 @@ export interface AppOptions {
   db: Database;
   labelStream: LabelStream;
   clientDir?: string;
+  auth?: AuthService;
+  domainPatterns?: DomainPattern[];
 }
 
 function rowToSignedLabel(row: LabelRow): SignedLabel {
@@ -37,9 +43,13 @@ function rowToSignedLabel(row: LabelRow): SignedLabel {
   };
 }
 
-export function createApp({ db, labelStream, clientDir }: AppOptions): Hono {
+export function createApp({ db, labelStream, clientDir, auth, domainPatterns }: AppOptions): Hono {
   const app = new Hono();
 
+  if (auth) {
+    app.route("/", createAuthRoutes(auth));
+    if (domainPatterns) app.route("/api/admin", createAdminRoutes(db, auth, domainPatterns));
+  }
   app.route("/api", createDashboardRoutes(db));
   app.get("/xrpc/_health", (c) => c.json({ version: 1 }));
   app.get("/xrpc/com.atproto.label.queryLabels", async (c) => {
@@ -98,6 +108,8 @@ export function createApp({ db, labelStream, clientDir }: AppOptions): Hono {
       app.use("/*", serveStatic({ root: clientDir }));
       app.get("/", serveStatic({ root: clientDir, path: "index.html" }));
       app.get("/dashboard", serveStatic({ root: clientDir, path: "index.html" }));
+      app.get("/login", serveStatic({ root: clientDir, path: "index.html" }));
+      app.get("/admin/*", serveStatic({ root: clientDir, path: "index.html" }));
     } else {
       console.warn(`Static file directory not found: ${root} — skipping static serving`);
     }

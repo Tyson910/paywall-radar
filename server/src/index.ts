@@ -8,13 +8,28 @@ const signingKey = process.env.SIGNING_KEY;
 const dbPath = process.env.DB_PATH ?? "paywall-radar.db";
 const clientDir = process.env.CLIENT_DIR ?? "dist/client";
 const port = Number(process.env.PORT ?? 4100);
+const adminDid = process.env.ADMIN_DID;
+const sessionSecret = process.env.SESSION_SECRET;
+const publicUrl = process.env.PUBLIC_URL ?? `http://127.0.0.1:${port}`;
+const oauthPrivateKey = process.env.OAUTH_PRIVATE_KEY;
 
 async function main() {
-  if (!did || !signingKey) {
-    throw new Error("DID and SIGNING_KEY environment variables are required");
+  if (!did || !signingKey || !adminDid || !sessionSecret) {
+    throw new Error(
+      "DID, SIGNING_KEY, ADMIN_DID, and SESSION_SECRET environment variables are required",
+    );
   }
 
-  const runtime = await startRuntime({ did, signingKey, dbPath, clientDir });
+  const runtime = await startRuntime({
+    did,
+    signingKey,
+    dbPath,
+    clientDir,
+    adminDid,
+    publicUrl,
+    sessionSecret,
+    ...(oauthPrivateKey ? { oauthPrivateKey } : {}),
+  });
   const webSocketServer = new WebSocketServer({ noServer: true });
   const server = serve(
     {

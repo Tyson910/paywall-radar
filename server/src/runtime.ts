@@ -3,6 +3,7 @@ import type { Client } from "@libsql/client";
 import type { JetstreamConsumer } from "./jetstream-consumer.js";
 
 import { createApp } from "./app.js";
+import { createAuthService } from "./auth.js";
 import { openDatabase } from "./database/connection.js";
 import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
@@ -16,6 +17,10 @@ export interface RuntimeOptions {
   signingKey: string;
   dbPath: string;
   clientDir?: string;
+  adminDid: string;
+  publicUrl: string;
+  sessionSecret: string;
+  oauthPrivateKey?: string;
 }
 
 export interface Runtime {
@@ -36,15 +41,23 @@ export async function startRuntime(options: RuntimeOptions): Promise<Runtime> {
     client = connection.client;
     const { db } = connection;
 
-    const [patterns, initialState, keypair] = await Promise.all([
+    const [patterns, initialState, keypair, auth] = await Promise.all([
       loadDomainPatterns(db),
       loadCursorState(db),
       loadSigningKey(options.signingKey),
+      createAuthService(db, {
+        adminDid: options.adminDid,
+        publicUrl: options.publicUrl,
+        sessionSecret: options.sessionSecret,
+        ...(options.oauthPrivateKey ? { oauthPrivateKey: options.oauthPrivateKey } : {}),
+      }),
     ]);
 
     const app = createApp({
       db,
       labelStream,
+      auth,
+      domainPatterns: patterns,
       ...(options.clientDir != null && { clientDir: options.clientDir }),
     });
 

@@ -82,12 +82,16 @@ async function getRecentLabels(db: Database) {
       authorDid: labels.authorDid,
       domain: labels.domain,
       createdAt: labels.cts,
+      postText: labels.postText,
     })
     .from(labels)
     .orderBy(desc(labels.cts), desc(labels.id))
     .limit(10);
 
-  return rows;
+  return rows.map(({ postText, ...row }) => ({
+    ...row,
+    ...(postText != null ? { postText } : {}),
+  }));
 }
 
 export async function getMonitoredDomains(db: Database): Promise<MonitoredDomain[]> {
@@ -116,6 +120,7 @@ export async function getRecentLabelsPage(
       authorDid: labels.authorDid,
       domain: labels.domain,
       createdAt: labels.cts,
+      postText: labels.postText,
     })
     .from(labels)
     .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -127,7 +132,10 @@ export async function getRecentLabelsPage(
   const nextCursor = hasMore ? page[page.length - 1]!.id : null;
 
   return {
-    labels: page.map(({ id: _, ...rest }) => rest),
+    labels: page.map(({ id: _, postText, ...rest }) => ({
+      ...rest,
+      ...(postText != null ? { postText } : {}),
+    })),
     nextCursor,
   };
 }
