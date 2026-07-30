@@ -1,6 +1,6 @@
 import type { NodeSavedSessionStore, NodeSavedStateStore } from "@atproto/oauth-client-node";
 
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 
 import type { Database } from "./connection.js";
 
@@ -13,6 +13,8 @@ export function createOAuthStores(db: Database): {
   return {
     stateStore: {
       async set(key, value) {
+        const expiresBefore = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+        await db.delete(oauthState).where(lt(oauthState.updatedAt, expiresBefore));
         await db
           .insert(oauthState)
           .values({ key, value, updatedAt: new Date().toISOString() })

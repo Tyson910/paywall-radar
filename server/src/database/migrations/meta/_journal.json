@@ -22,6 +22,13 @@
       "when": 1785281084740,
       "tag": "0002_deep_goliath",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785302925283,
+      "tag": "0003_watery_charles_xavier",
+      "breakpoints": true
     }
   ]
 }

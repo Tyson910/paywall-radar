@@ -7,6 +7,8 @@ import { upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { gt } from "drizzle-orm";
 import { Hono } from "hono";
+import { logger } from "hono/logger";
+import { secureHeaders } from "hono/secure-headers";
 
 import type { AuthService } from "./auth.js";
 import type { Database } from "./database/connection.js";
@@ -45,6 +47,26 @@ function rowToSignedLabel(row: LabelRow): SignedLabel {
 
 export function createApp({ db, labelStream, clientDir, auth, domainPatterns }: AppOptions): Hono {
   const app = new Hono();
+
+  app.use("*", logger());
+  app.use(
+    "*",
+    secureHeaders({
+      contentSecurityPolicy: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
+        imgSrc: ["'self'", "data:"],
+        connectSrc: ["'self'", "ws:", "wss:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        frameAncestors: ["'none'"],
+      },
+      referrerPolicy: "strict-origin-when-cross-origin",
+      strictTransportSecurity: auth?.secureCookies ?? false,
+      xFrameOptions: "DENY",
+    }),
+  );
 
   if (auth) {
     app.route("/", createAuthRoutes(auth));

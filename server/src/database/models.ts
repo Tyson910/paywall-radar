@@ -50,6 +50,16 @@ export const oauthSessions = sqliteTable("oauth_sessions", {
   updatedAt: text("updated_at").notNull(),
 });
 
+export const adminSession = sqliteTable(
+  "admin_session",
+  {
+    id: integer().primaryKey(),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: text("expires_at").notNull(),
+  },
+  (table) => [check("admin_session_single_row_check", sql`${table.id} = 1`)],
+);
+
 export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
 export type LabelRow = typeof labels.$inferSelect;

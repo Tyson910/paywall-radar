@@ -1,3 +1,4 @@
+import { generateKeyPairSync } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -39,6 +40,13 @@ describe("createApp", () => {
 
     const healthResponse = await app.request("/xrpc/_health");
     expect(healthResponse.status).toBe(200);
+    expect(healthResponse.headers.get("x-content-type-options")).toBe("nosniff");
+    expect(healthResponse.headers.get("x-frame-options")).toBe("DENY");
+    expect(healthResponse.headers.get("referrer-policy")).toBe("strict-origin-when-cross-origin");
+    expect(healthResponse.headers.get("content-security-policy")).toContain(
+      "frame-ancestors 'none'",
+    );
+    expect(healthResponse.headers.has("strict-transport-security")).toBe(false);
     await expect(healthResponse.json()).resolves.toEqual({ version: 1 });
 
     const dashboardResponse = await app.request("/api/dashboard");
@@ -79,9 +87,12 @@ describe("createApp", () => {
       publicUrl: "http://127.0.0.1:4100",
       sessionSecret,
       secureCookies: false,
+      sessionMaxAge: 60 * 60 * 24,
       authorize: async () => new URL("https://example.com/authorize"),
       callback: async () => adminDid,
-      restore: async () => undefined,
+      createSession: async () => "session-token",
+      restoreSession: async () => true,
+      clearSession: async () => undefined,
       revoke: async () => undefined,
     };
     const patterns = await loadDomainPatterns(db);
@@ -91,8 +102,16 @@ describe("createApp", () => {
     expect(unauthorized.status).toBe(401);
     expect((await app.request("/api/domains")).status).toBe(200);
 
-    const cookie = await generateSignedCookie("paywall_radar_session", adminDid, sessionSecret);
-    const headers = { Cookie: cookie, "Content-Type": "application/json" };
+    const cookie = await generateSignedCookie(
+      "paywall_radar_session",
+      "session-token",
+      sessionSecret,
+    );
+    const headers = {
+      Cookie: cookie,
+      "Content-Type": "application/json",
+      Origin: "http://127.0.0.1:4100",
+    };
     const created = await app.request("/api/admin/domains", {
       method: "POST",
       headers,
@@ -119,9 +138,12 @@ describe("createApp", () => {
       publicUrl: "http://127.0.0.1:4100",
       sessionSecret: "a-secure-session-secret-that-is-long-enough",
       secureCookies: false,
+      sessionMaxAge: 60 * 60 * 24,
       authorize: async () => new URL("https://example.com/authorize"),
       callback: async () => adminDid,
-      restore: async () => undefined,
+      createSession: async () => "session-token",
+      restoreSession: async () => true,
+      clearSession: async () => undefined,
       revoke: async () => undefined,
     };
     const app = createApp({ db, labelStream: new LabelStream(), auth });
@@ -130,6 +152,64 @@ describe("createApp", () => {
     expect(response.status).toBe(302);
     expect(response.headers.get("location")).toBe("/admin/domains");
     expect(response.headers.get("set-cookie")).toContain("paywall_radar_session=");
+    expect(response.headers.get("set-cookie")).toContain("Max-Age=86400");
+  });
+
+  it("does not disclose the admin DID in the session response", async () => {
+    const adminDid = "did:plc:admin";
+    const sessionSecret = "a-secure-session-secret-that-is-long-enough";
+    const auth: AuthService = {
+      adminDid,
+      clientMetadata: {} as AuthService["clientMetadata"],
+      jwks: { keys: [] },
+      publicUrl: "http://127.0.0.1:4100",
+      sessionSecret,
+      secureCookies: false,
+      sessionMaxAge: 60 * 60 * 24,
+      authorize: async () => new URL("https://example.com/authorize"),
+      callback: async () => adminDid,
+      createSession: async () => "session-token",
+      restoreSession: async () => true,
+      clearSession: async () => undefined,
+      revoke: async () => undefined,
+    };
+    const app = createApp({ db, labelStream: new LabelStream(), auth });
+    const cookie = await generateSignedCookie(
+      "paywall_radar_session",
+      "session-token",
+      sessionSecret,
+    );
+
+    const response = await app.request("/api/session", { headers: { Cookie: cookie } });
+
+    await expect(response.json()).resolves.toEqual({ authenticated: true });
+  });
+
+  it("rejects OAuth login requests from an untrusted origin", async () => {
+    const auth: AuthService = {
+      adminDid: "did:plc:admin",
+      clientMetadata: {} as AuthService["clientMetadata"],
+      jwks: { keys: [] },
+      publicUrl: "https://paywall-radar.example",
+      sessionSecret: "a-secure-session-secret-that-is-long-enough",
+      secureCookies: true,
+      sessionMaxAge: 60 * 60 * 24,
+      authorize: async () => new URL("https://example.com/authorize"),
+      callback: async () => "did:plc:admin",
+      createSession: async () => "session-token",
+      restoreSession: async () => true,
+      clearSession: async () => undefined,
+      revoke: async () => undefined,
+    };
+    const app = createApp({ db, labelStream: new LabelStream(), auth });
+
+    const response = await app.request("/oauth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: "https://attacker.example" },
+      body: JSON.stringify({ handle: "admin.bsky.social" }),
+    });
+
+    expect(response.status).toBe(403);
   });
 
   it("configures loopback OAuth metadata for local development", async () => {
@@ -146,5 +226,34 @@ describe("createApp", () => {
       scope: "atproto",
       redirect_uris: ["http://127.0.0.1:4100/oauth/callback"],
     });
+  });
+
+  it("accepts a PKCS#8 PEM OAuth private key for production metadata", async () => {
+    const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+    const pem = privateKey.export({ format: "pem", type: "pkcs8" }).toString();
+    const auth = await createAuthService(db, {
+      adminDid: "did:plc:admin",
+      publicUrl: "https://paywall-radar.example",
+      sessionSecret: "a-secure-session-secret-that-is-long-enough",
+      oauthPrivateKey: pem,
+    });
+
+    expect(auth.clientMetadata.token_endpoint_auth_method).toBe("private_key_jwt");
+    expect(auth.jwks.keys).toHaveLength(1);
+    expect(JSON.stringify(auth.jwks)).not.toContain('"d"');
+  });
+
+  it("rotates the opaque admin session token on each login", async () => {
+    const auth = await createAuthService(db, {
+      adminDid: "did:plc:admin",
+      publicUrl: "http://127.0.0.1:4100",
+      sessionSecret: "a-secure-session-secret-that-is-long-enough",
+    });
+
+    const previousToken = await auth.createSession();
+    const currentToken = await auth.createSession();
+
+    expect(currentToken).not.toBe(previousToken);
+    await expect(auth.restoreSession(previousToken)).resolves.toBe(false);
   });
 });

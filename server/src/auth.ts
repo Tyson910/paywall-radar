@@ -1,3 +1,6 @@
+import { createHash, randomBytes } from "node:crypto";
+
+import { safeFetchWrap } from "@atproto-labs/fetch-node";
 import {
   buildAtprotoLoopbackClientMetadata,
   JoseKey,
@@ -5,10 +8,18 @@ import {
   oauthClientMetadataSchema,
   requestLocalLock,
 } from "@atproto/oauth-client-node";
+import { eq } from "drizzle-orm";
 
 import type { Database } from "./database/connection.js";
 
+import { adminSession } from "./database/models.js";
 import { createOAuthStores } from "./database/oauth.js";
+
+const APP_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
+
+function hashSessionToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export interface AuthService {
   readonly adminDid: string;
@@ -17,9 +28,12 @@ export interface AuthService {
   readonly publicUrl: string;
   readonly sessionSecret: string;
   readonly secureCookies: boolean;
+  readonly sessionMaxAge: number;
   authorize(handle: string): Promise<URL>;
   callback(params: URLSearchParams): Promise<string>;
-  restore(did: string): Promise<void>;
+  createSession(): Promise<string>;
+  restoreSession(token: string): Promise<boolean>;
+  clearSession(token: string): Promise<void>;
   revoke(did: string): Promise<void>;
 }
 
@@ -67,16 +81,23 @@ export async function createAuthService(db: Database, options: AuthOptions): Pro
     if (!options.oauthPrivateKey) {
       throw new Error("OAUTH_PRIVATE_KEY is required when PUBLIC_URL is not loopback");
     }
-    keyset = [await JoseKey.fromJWK(options.oauthPrivateKey)];
+    const privateKey = options.oauthPrivateKey.replaceAll("\\n", "\n");
+    keyset = [await JoseKey.fromImportable(privateKey, "paywall-radar")];
   }
 
   const stores = createOAuthStores(db);
+  const safeFetch = safeFetchWrap();
   const client = new NodeOAuthClient({
     clientMetadata,
     ...(keyset ? { keyset } : {}),
     stateStore: stores.stateStore,
     sessionStore: stores.sessionStore,
     requestLock: requestLocalLock,
+    fetch: (input, init) =>
+      safeFetch(input, {
+        ...init,
+        redirect: init?.redirect ?? "error",
+      }),
   });
 
   return {
@@ -86,13 +107,40 @@ export async function createAuthService(db: Database, options: AuthOptions): Pro
     publicUrl: publicUrl.origin,
     sessionSecret: options.sessionSecret,
     secureCookies: publicUrl.protocol === "https:",
+    sessionMaxAge: APP_SESSION_MAX_AGE_SECONDS,
     authorize: (handle) => client.authorize(handle, { scope: "atproto" }),
     callback: async (params) => {
       const { session } = await client.callback(params);
       return session.did;
     },
-    restore: async (did) => {
-      await client.restore(did);
+    createSession: async () => {
+      const token = randomBytes(32).toString("base64url");
+      await db
+        .insert(adminSession)
+        .values({
+          id: 1,
+          tokenHash: hashSessionToken(token),
+          expiresAt: new Date(Date.now() + APP_SESSION_MAX_AGE_SECONDS * 1000).toISOString(),
+        })
+        .onConflictDoUpdate({
+          target: adminSession.id,
+          set: {
+            tokenHash: hashSessionToken(token),
+            expiresAt: new Date(Date.now() + APP_SESSION_MAX_AGE_SECONDS * 1000).toISOString(),
+          },
+        });
+      return token;
+    },
+    restoreSession: async (token) => {
+      const row = await db.query.adminSession.findFirst({
+        where: (session, { eq }) => eq(session.tokenHash, hashSessionToken(token)),
+      });
+      if (!row || row.expiresAt <= new Date().toISOString()) return false;
+      await client.restore(options.adminDid);
+      return true;
+    },
+    clearSession: async (token) => {
+      await db.delete(adminSession).where(eq(adminSession.tokenHash, hashSessionToken(token)));
     },
     revoke: (did) => client.revoke(did),
   };

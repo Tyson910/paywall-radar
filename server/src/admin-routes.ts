@@ -1,13 +1,13 @@
 import { sValidator } from "@hono/standard-validator";
 import { Hono } from "hono";
-import { csrf } from "hono/csrf";
 import { z } from "zod";
 
 import type { AuthService } from "./auth.js";
 import type { Database } from "./database/connection.js";
 import type { DomainPattern } from "./domains.js";
 
-import { getAuthenticatedDid } from "./auth-routes.js";
+import { audit } from "./audit.js";
+import { getAuthenticatedDid, trustedOrigin } from "./auth-routes.js";
 import { addDomain, removeDomain } from "./database/domains.js";
 import { loadDomainPatterns } from "./database/state.js";
 import { getMonitoredDomains } from "./database/stats.js";
@@ -39,7 +39,7 @@ async function refreshPatterns(db: Database, patterns: DomainPattern[]): Promise
 export function createAdminRoutes(db: Database, auth: AuthService, patterns: DomainPattern[]) {
   const routes = new Hono();
 
-  routes.use("*", csrf(), async (c, next) => {
+  routes.use("*", async (c, next) => {
     if (!(await getAuthenticatedDid(c, auth))) {
       return c.json({ error: "Unauthorized" }, 401);
     }
@@ -48,20 +48,28 @@ export function createAdminRoutes(db: Database, auth: AuthService, patterns: Dom
 
   return routes
     .get("/domains", async (c) => c.json(await getMonitoredDomains(db)))
-    .post("/domains", validateDomainInput, async (c) => {
+    .post("/domains", trustedOrigin(auth.publicUrl), validateDomainInput, async (c) => {
       const input = c.req.valid("json");
       const row = await addDomain(db, input.pattern);
       await refreshPatterns(db, patterns);
+      audit(row ? "domain.created" : "domain.already_exists", {
+        actor: auth.adminDid,
+        pattern: input.pattern,
+      });
       return c.json(
         { domain: row ?? { pattern: input.pattern }, created: row != null },
         row ? 201 : 200,
       );
     })
-    .delete("/domains", validateDomainInput, async (c) => {
+    .delete("/domains", trustedOrigin(auth.publicUrl), validateDomainInput, async (c) => {
       const input = c.req.valid("json");
       const row = await removeDomain(db, input.pattern);
       await refreshPatterns(db, patterns);
-      if (!row) return c.json({ error: "Domain pattern not found" }, 404);
+      if (!row) {
+        audit("domain.delete_not_found", { actor: auth.adminDid, pattern: input.pattern });
+        return c.json({ error: "Domain pattern not found" }, 404);
+      }
+      audit("domain.deleted", { actor: auth.adminDid, pattern: input.pattern });
       return c.json({ success: true });
     });
 }
