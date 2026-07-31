@@ -96,7 +96,13 @@ describe("createApp", () => {
       revoke: async () => undefined,
     };
     const patterns = await loadDomainPatterns(db);
-    const app = createApp({ db, labelStream: new LabelStream(), auth, domainPatterns: patterns });
+    const adminDeps = {
+      db,
+      auth,
+      patterns,
+      pollSelfPosts: async () => ({ posts: 0, labeled: 0 }),
+    };
+    const app = createApp({ db, labelStream: new LabelStream(), auth, adminDeps });
 
     const unauthorized = await app.request("/api/admin/domains");
     expect(unauthorized.status).toBe(401);

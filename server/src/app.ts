@@ -10,10 +10,10 @@ import { Hono } from "hono";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 
+import type { AdminRoutesDeps } from "./admin-routes.js";
 import type { AuthService } from "./auth.js";
 import type { Database } from "./database/connection.js";
 import type { LabelRow } from "./database/models.js";
-import type { DomainPattern } from "./domains.js";
 import type { LabelStream } from "./label-stream.js";
 import type { SignedLabel } from "./labeler.js";
 
@@ -28,7 +28,7 @@ export interface AppOptions {
   labelStream: LabelStream;
   clientDir?: string;
   auth?: AuthService;
-  domainPatterns?: DomainPattern[];
+  adminDeps?: AdminRoutesDeps;
 }
 
 function rowToSignedLabel(row: LabelRow): SignedLabel {
@@ -45,7 +45,7 @@ function rowToSignedLabel(row: LabelRow): SignedLabel {
   };
 }
 
-export function createApp({ db, labelStream, clientDir, auth, domainPatterns }: AppOptions): Hono {
+export function createApp({ db, labelStream, clientDir, auth, adminDeps }: AppOptions): Hono {
   const app = new Hono();
 
   app.use("*", logger());
@@ -70,7 +70,7 @@ export function createApp({ db, labelStream, clientDir, auth, domainPatterns }: 
 
   if (auth) {
     app.route("/", createAuthRoutes(auth));
-    if (domainPatterns) app.route("/api/admin", createAdminRoutes(db, auth, domainPatterns));
+    if (adminDeps) app.route("/api/admin", createAdminRoutes(adminDeps));
   }
   app.route("/api", createDashboardRoutes(db));
   app.get("/xrpc/_health", (c) => c.json({ version: 1 }));

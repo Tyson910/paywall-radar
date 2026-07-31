@@ -36,7 +36,14 @@ async function refreshPatterns(db: Database, patterns: DomainPattern[]): Promise
   patterns.splice(0, patterns.length, ...(await loadDomainPatterns(db)));
 }
 
-export function createAdminRoutes(db: Database, auth: AuthService, patterns: DomainPattern[]) {
+export interface AdminRoutesDeps {
+  db: Database;
+  auth: AuthService;
+  patterns: DomainPattern[];
+  pollSelfPosts: () => Promise<{ posts: number; labeled: number }>;
+}
+
+export function createAdminRoutes({ db, auth, patterns, pollSelfPosts }: AdminRoutesDeps) {
   const routes = new Hono();
 
   routes.use("*", async (c, next) => {
@@ -71,6 +78,10 @@ export function createAdminRoutes(db: Database, auth: AuthService, patterns: Dom
       }
       audit("domain.deleted", { actor: auth.adminDid, pattern: input.pattern });
       return c.json({ success: true });
+    })
+    .post("/poll-self-posts", async (c) => {
+      const result = await pollSelfPosts();
+      return c.json(result);
     });
 }
 

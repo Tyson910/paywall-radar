@@ -13,6 +13,7 @@ import { loadRuntimeEnv } from "./env.js";
 import { startJetstreamConsumer } from "./jetstream-consumer.js";
 import { LabelStream } from "./label-stream.js";
 import { loadSigningKey, signLabel } from "./labeler.js";
+import { pollSelfPosts } from "./poll-self-posts.js";
 
 export interface Runtime {
   app: ReturnType<typeof createApp>;
@@ -46,11 +47,18 @@ export async function startRuntime(): Promise<Runtime> {
       }),
     ]);
 
+    const pollDeps = { did: options.did, patterns, keypair, db, labelStream };
+
     const app = createApp({
       db,
       labelStream,
       auth,
-      domainPatterns: patterns,
+      adminDeps: {
+        db,
+        auth,
+        patterns,
+        pollSelfPosts: () => pollSelfPosts(pollDeps),
+      },
       ...(options.clientDir != null && { clientDir: options.clientDir }),
     });
 

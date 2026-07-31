@@ -86,3 +86,7 @@ export function addDomain(pattern: string) {
 export function deleteDomain(pattern: string) {
   return parseResponse(adminClient.domains.$delete({ json: { pattern } }));
 }
+
+export function pollSelfPosts() {
+  return parseResponse(adminClient["poll-self-posts"].$post());
+}

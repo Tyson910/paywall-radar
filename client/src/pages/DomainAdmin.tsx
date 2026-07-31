@@ -8,6 +8,7 @@ import {
   adminDomainsQueryOptions,
   deleteDomain as deleteDomainRequest,
   logout as logoutRequest,
+  pollSelfPosts,
   sessionQueryOptions,
 } from "../api.js";
 
@@ -39,6 +40,7 @@ export function DomainAdmin() {
       await navigate({ to: "/login" });
     },
   });
+  const poll = useMutation({ mutationFn: pollSelfPosts });
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -106,6 +108,33 @@ export function DomainAdmin() {
           </div>
         ))}
         {domains.isPending && <p className="p-4 text-neutral-500">Loading domains…</p>}
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold">Self-post labeling</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Check the labeler account's recent posts and label any with paywall links.
+        </p>
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => poll.mutate()}
+            disabled={poll.isPending}
+            className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white disabled:opacity-60"
+          >
+            {poll.isPending ? "Checking…" : "Poll now"}
+          </button>
+          {poll.isSuccess && (
+            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+              {poll.data.posts} posts checked, {poll.data.labeled} newly labeled
+            </p>
+          )}
+          {poll.isError && (
+            <p className="text-sm text-red-600">
+              {apiErrorMessage(poll.error, "Poll failed")}
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );
