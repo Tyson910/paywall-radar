@@ -13,6 +13,7 @@
     "dev": "tsx watch --env-file=.env server/src/dev.ts",
     "dev:server": "tsx watch --env-file=.env server/src/index.ts",
     "db:generate": "drizzle-kit generate",
+    "db:clone:production": "bash scripts/clone-production-db.sh",
     "db:init": "tsx --env-file=.env server/src/scripts/initialize-database.ts",
     "labeler:setup": "tsx --env-file=.env server/src/scripts/setup-labeler.ts",
     "db:migrate": "drizzle-kit migrate",

@@ -33,6 +33,14 @@ RUN pnpm build && pnpm build:client
 FROM litestream/litestream:0.5.14-scratch AS litestream
 
 
+# ---- production database clone ----------------------------------------------
+FROM alpine:3.22 AS clone-db
+RUN apk add --no-cache bash ca-certificates
+COPY --from=litestream /usr/local/bin/litestream /usr/local/bin/litestream
+WORKDIR /backup
+CMD ["bash", "-euo", "pipefail", "-c", ": \"${LITESTREAM_REPLICA_URL:?LITESTREAM_REPLICA_URL is required}\"; : \"${AWS_ACCESS_KEY_ID:?AWS_ACCESS_KEY_ID is required}\"; : \"${AWS_SECRET_ACCESS_KEY:?AWS_SECRET_ACCESS_KEY is required}\"; : \"${OUTPUT_FILE:?OUTPUT_FILE is required}\"; litestream restore -integrity-check full -o \"/backup/${OUTPUT_FILE}\" \"${LITESTREAM_REPLICA_URL}\""]
+
+
 # ---- runtime ----------------------------------------------------------------
 FROM node:22-slim AS runtime
 ENV NODE_ENV=production \
