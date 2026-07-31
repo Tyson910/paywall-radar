@@ -5,6 +5,7 @@ import type { JetstreamConsumer } from "./jetstream-consumer.js";
 import { createApp } from "./app.js";
 import { createAuthService } from "./auth.js";
 import { openDatabase } from "./database/connection.js";
+import { recordFailedEvent } from "./database/failed-events.js";
 import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
 import { loadCursorState, loadDomainPatterns, saveCursorState } from "./database/state.js";
@@ -79,6 +80,7 @@ export async function startRuntime(): Promise<Runtime> {
           labelStream.publish(inserted.id, signed);
         }
       },
+      recordFailure: (failure) => recordFailedEvent(db, failure),
       saveState: (state) => saveCursorState(db, state),
     });
 

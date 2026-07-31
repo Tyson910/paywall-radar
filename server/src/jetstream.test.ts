@@ -101,9 +101,18 @@ describe("processJetstreamMessage", () => {
   it("rejects malformed JSON and create events without records", () => {
     expect(processJetstreamMessage("not json", patterns)).toEqual({
       type: "invalid",
+      reason: "invalid_json: message is not valid JSON",
+      payload: "not json",
     });
     expect(
       processJetstreamMessage(JSON.stringify(createEvent({ record: undefined })), patterns),
-    ).toEqual({ type: "invalid" });
+    ).toMatchObject({
+      type: "invalid",
+      reason: expect.stringContaining("invalid_post_event"),
+      cursorUs: 1_725_519_626_134_432,
+      did: "did:plc:example",
+      collection: "app.bsky.feed.post",
+      rkey: "3l3pte3p2e325",
+    });
   });
 });

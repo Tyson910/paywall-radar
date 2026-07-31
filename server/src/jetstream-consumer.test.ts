@@ -109,10 +109,12 @@ describe("startJetstreamConsumer", () => {
   it("logs malformed messages without advancing the cursor", async () => {
     const socket = new FakeSocket();
     const warn = vi.fn();
+    const recordFailure = vi.fn();
     const consumer = startJetstreamConsumer({
       initialState: { cursorUs: 100, postsScanned: 3 },
       patterns: [],
       handlePost: vi.fn(),
+      recordFailure,
       saveState: vi.fn(),
       createSocket: () => socket,
       logger: { info: vi.fn(), warn, error: vi.fn() },
@@ -122,6 +124,10 @@ describe("startJetstreamConsumer", () => {
     await settlePromises();
 
     expect(warn).toHaveBeenCalledOnce();
+    expect(recordFailure).toHaveBeenCalledWith({
+      reason: "invalid_json: message is not valid JSON",
+      payload: "not json",
+    });
     expect(consumer.getState()).toEqual({ cursorUs: 100, postsScanned: 3 });
     await consumer.stop();
   });
@@ -130,6 +136,7 @@ describe("startJetstreamConsumer", () => {
     vi.useFakeTimers();
     const socket = new FakeSocket();
     const handled: number[] = [];
+    const recordFailure = vi.fn();
     const consumer = startJetstreamConsumer({
       initialState: { cursorUs: 100, postsScanned: 3 },
       patterns: [],
@@ -137,6 +144,7 @@ describe("startJetstreamConsumer", () => {
         handled.push(post.cursorUs);
         throw new Error("label failed");
       },
+      recordFailure,
       saveState: vi.fn(),
       createSocket: () => socket,
       logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -147,6 +155,15 @@ describe("startJetstreamConsumer", () => {
     await settlePromises();
 
     expect(handled).toEqual([200]);
+    expect(recordFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cursorUs: 200,
+        did: "did:plc:example",
+        collection: "app.bsky.feed.post",
+        rkey: "first",
+        reason: "processing_error: label failed",
+      }),
+    );
     expect(consumer.getState()).toEqual({ cursorUs: 100, postsScanned: 3 });
     await consumer.stop();
   });

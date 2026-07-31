@@ -7,7 +7,15 @@ import { processPost, type LabelAction } from "./pipeline.js";
 export const defaultJetstreamEndpoint = "wss://jetstream2.us-east.bsky.network/subscribe";
 
 export type JetstreamMessageResult =
-  | { type: "invalid" }
+  | {
+      type: "invalid";
+      reason: string;
+      payload: string;
+      cursorUs?: number;
+      did?: string;
+      collection?: string;
+      rkey?: string;
+    }
   | { type: "ignored"; cursorUs: number }
   | {
       type: "post";
@@ -31,6 +39,23 @@ export function buildJetstreamUrl(endpoint: string, cursorUs: number): string {
 
 type JsonParseResult = { success: true; value: unknown } | { success: false };
 
+const MAX_FAILURE_PAYLOAD_CHARS = 16_384;
+
+function failurePayload(message: string): string {
+  return message.slice(0, MAX_FAILURE_PAYLOAD_CHARS);
+}
+
+function validationReason(
+  prefix: string,
+  issues: { path: PropertyKey[]; message: string }[],
+): string {
+  const details = issues
+    .slice(0, 5)
+    .map((issue) => `${issue.path.join(".") || "<root>"}: ${issue.message}`)
+    .join("; ");
+  return `${prefix}: ${details}`;
+}
+
 function parseJson(message: string): JsonParseResult {
   try {
     return { success: true, value: JSON.parse(message) as unknown };
@@ -45,12 +70,20 @@ export function processJetstreamMessage(
 ): JetstreamMessageResult {
   const parsed = parseJson(message);
   if (!parsed.success) {
-    return { type: "invalid" };
+    return {
+      type: "invalid",
+      reason: "invalid_json: message is not valid JSON",
+      payload: failurePayload(message),
+    };
   }
 
   const envelope = jetstreamEventEnvelopeSchema.safeParse(parsed.value);
   if (!envelope.success) {
-    return { type: "invalid" };
+    return {
+      type: "invalid",
+      reason: validationReason("invalid_envelope", envelope.error.issues),
+      payload: failurePayload(message),
+    };
   }
 
   if (envelope.data.kind !== "commit") {
@@ -59,7 +92,30 @@ export function processJetstreamMessage(
 
   const event = jetstreamPostEventSchema.safeParse(parsed.value);
   if (!event.success) {
-    return { type: "invalid" };
+    const commit =
+      typeof parsed.value === "object" &&
+      parsed.value !== null &&
+      "commit" in parsed.value &&
+      typeof parsed.value.commit === "object" &&
+      parsed.value.commit !== null
+        ? parsed.value.commit
+        : null;
+    const collection =
+      commit && "collection" in commit && typeof commit.collection === "string"
+        ? commit.collection
+        : undefined;
+    const rkey =
+      commit && "rkey" in commit && typeof commit.rkey === "string" ? commit.rkey : undefined;
+
+    return {
+      type: "invalid",
+      reason: validationReason("invalid_post_event", event.error.issues),
+      payload: failurePayload(message),
+      cursorUs: envelope.data.time_us,
+      did: envelope.data.did,
+      ...(collection ? { collection } : {}),
+      ...(rkey ? { rkey } : {}),
+    };
   }
 
   if (event.data.commit.operation === "delete") {

@@ -38,6 +38,21 @@ export const cursor = sqliteTable(
   (table) => [check("cursor_single_row_check", sql`${table.id} = 1`)],
 );
 
+export const failedEvents = sqliteTable(
+  "failed_events",
+  {
+    id: integer().primaryKey({ autoIncrement: true }),
+    cursorUs: integer("cursor_us"),
+    did: text(),
+    collection: text(),
+    rkey: text(),
+    reason: text().notNull(),
+    payload: text().notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [index("failed_events_created_at_idx").on(table.createdAt)],
+);
+
 export const oauthState = sqliteTable("oauth_state", {
   key: text().primaryKey(),
   value: text({ mode: "json" }).$type<NodeSavedState>().notNull(),
@@ -64,3 +79,4 @@ export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
 export type LabelRow = typeof labels.$inferSelect;
 export type CursorRow = typeof cursor.$inferSelect;
+export type FailedEventRow = typeof failedEvents.$inferSelect;

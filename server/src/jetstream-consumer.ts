@@ -12,6 +12,15 @@ import {
 
 type PostResult = Extract<JetstreamMessageResult, { type: "post" }>;
 
+export interface FailedJetstreamEvent {
+  cursorUs?: number;
+  did?: string;
+  collection?: string;
+  rkey?: string;
+  reason: string;
+  payload: string;
+}
+
 export interface JetstreamSocket {
   onOpen(handler: () => void): void;
   onMessage(handler: (message: string) => void): void;
@@ -30,6 +39,7 @@ export interface JetstreamConsumerOptions {
   initialState: CursorState;
   patterns: readonly DomainPattern[];
   handlePost(result: PostResult): Promise<void>;
+  recordFailure?(failure: FailedJetstreamEvent): Promise<void>;
   saveState(state: CursorState): Promise<void>;
   endpoint?: string;
   flushIntervalMs?: number;
@@ -121,6 +131,25 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
     }, reconnectDelayMs);
   }
 
+  async function reportFailure(failure: FailedJetstreamEvent): Promise<void> {
+    logger.warn(
+      JSON.stringify({
+        event: "jetstream_event_failed",
+        reason: failure.reason,
+        cursorUs: failure.cursorUs,
+        did: failure.did,
+        collection: failure.collection,
+        rkey: failure.rkey,
+      }),
+    );
+
+    try {
+      await options.recordFailure?.(failure);
+    } catch (error) {
+      logger.error("Failed to store Jetstream failure", error);
+    }
+  }
+
   function connect(): void {
     if (stopped) {
       return;
@@ -153,12 +182,35 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
           const result = processJetstreamMessage(message, options.patterns);
 
           if (result.type === "invalid") {
-            logger.warn("Ignored invalid Jetstream message");
+            await reportFailure({
+              reason: result.reason,
+              payload: result.payload,
+              ...(result.cursorUs != null ? { cursorUs: result.cursorUs } : {}),
+              ...(result.did ? { did: result.did } : {}),
+              ...(result.collection ? { collection: result.collection } : {}),
+              ...(result.rkey ? { rkey: result.rkey } : {}),
+            });
+            if (result.cursorUs != null) {
+              advanceState(result.cursorUs, false);
+            }
             return;
           }
 
           if (result.type === "post") {
-            await options.handlePost(result);
+            try {
+              await options.handlePost(result);
+            } catch (error) {
+              const rkey = result.postUri.split("/").at(-1);
+              await reportFailure({
+                cursorUs: result.cursorUs,
+                did: result.authorDid,
+                collection: "app.bsky.feed.post",
+                ...(rkey ? { rkey } : {}),
+                reason: `processing_error: ${error instanceof Error ? error.message : String(error)}`,
+                payload: message.slice(0, 16_384),
+              });
+              throw error;
+            }
           }
 
           advanceState(result.cursorUs, result.type === "post");
