@@ -13,9 +13,7 @@ import { signLabel } from "./labeler.js";
 import { processPost } from "./pipeline.js";
 
 const didDocSchema = z.object({
-  service: z
-    .array(z.object({ id: z.string(), serviceEndpoint: z.string() }))
-    .optional(),
+  service: z.array(z.object({ id: z.string(), serviceEndpoint: z.string() })).optional(),
 });
 
 const listRecordsSchema = z.object({
