@@ -105,9 +105,7 @@
       "indexes": {
         "domains_pattern_unique": {
           "name": "domains_pattern_unique",
-          "columns": [
-            "pattern"
-          ],
+          "columns": ["pattern"],
           "isUnique": true
         }
       },
@@ -179,9 +177,7 @@
       "indexes": {
         "failed_events_created_at_idx": {
           "name": "failed_events_created_at_idx",
-          "columns": [
-            "created_at"
-          ],
+          "columns": ["created_at"],
           "isUnique": false
         }
       },
@@ -282,23 +278,17 @@
       "indexes": {
         "labels_uri_unique": {
           "name": "labels_uri_unique",
-          "columns": [
-            "uri"
-          ],
+          "columns": ["uri"],
           "isUnique": true
         },
         "labels_cts_idx": {
           "name": "labels_cts_idx",
-          "columns": [
-            "cts"
-          ],
+          "columns": ["cts"],
           "isUnique": false
         },
         "labels_domain_idx": {
           "name": "labels_domain_idx",
-          "columns": [
-            "domain"
-          ],
+          "columns": ["domain"],
           "isUnique": false
         }
       },
