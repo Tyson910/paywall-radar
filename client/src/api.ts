@@ -90,3 +90,7 @@ export function deleteDomain(pattern: string) {
 export function pollSelfPosts() {
   return parseResponse(adminClient["poll-self-posts"].$post());
 }
+
+export function republishLabel(uri: string) {
+  return parseResponse(adminClient.labels.republish.$post({ json: { uri } }));
+}

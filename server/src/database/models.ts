@@ -28,6 +28,18 @@ export const labels = sqliteTable(
   (table) => [index("labels_cts_idx").on(table.cts), index("labels_domain_idx").on(table.domain)],
 );
 
+export const labelEvents = sqliteTable("label_events", {
+  seq: integer().primaryKey({ autoIncrement: true }),
+  src: text().notNull(),
+  uri: text().notNull(),
+  val: text().notNull(),
+  neg: integer({ mode: "boolean" }).notNull().default(false),
+  cts: text().notNull(),
+  cid: text(),
+  exp: text(),
+  sig: blob({ mode: "buffer" }).notNull(),
+});
+
 export const cursor = sqliteTable(
   "cursor",
   {
@@ -84,6 +96,7 @@ export const adminSession = sqliteTable(
 export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
 export type LabelRow = typeof labels.$inferSelect;
+export type LabelEventRow = typeof labelEvents.$inferSelect;
 export type CursorRow = typeof cursor.$inferSelect;
 export type JetstreamCursorRow = typeof jetstreamCursors.$inferSelect;
 export type FailedEventRow = typeof failedEvents.$inferSelect;

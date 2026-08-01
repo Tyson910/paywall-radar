@@ -28,8 +28,12 @@ const domainPatternSchema = z
   })
   .transform(parseDomainPattern);
 const domainInputSchema = z.object({ pattern: domainPatternSchema });
+const republishInputSchema = z.object({ uri: z.string().trim().startsWith("at://").max(2_048) });
 const validateDomainInput = sValidator("json", domainInputSchema, (result, c) => {
   if (!result.success) return c.json({ error: "Invalid domain pattern" }, 400);
+});
+const validateRepublishInput = sValidator("json", republishInputSchema, (result, c) => {
+  if (!result.success) return c.json({ error: "Invalid label URI" }, 400);
 });
 
 async function refreshPatterns(db: Database, patterns: DomainPattern[]): Promise<void> {
@@ -41,9 +45,16 @@ export interface AdminRoutesDeps {
   auth: AuthService;
   patterns: DomainPattern[];
   pollSelfPosts: () => Promise<{ posts: number; labeled: number }>;
+  republishLabel: (uri: string) => Promise<{ seq: number } | null>;
 }
 
-export function createAdminRoutes({ db, auth, patterns, pollSelfPosts }: AdminRoutesDeps) {
+export function createAdminRoutes({
+  db,
+  auth,
+  patterns,
+  pollSelfPosts,
+  republishLabel,
+}: AdminRoutesDeps) {
   const routes = new Hono();
 
   routes.use("*", async (c, next) => {
@@ -81,6 +92,14 @@ export function createAdminRoutes({ db, auth, patterns, pollSelfPosts }: AdminRo
     })
     .post("/poll-self-posts", async (c) => {
       const result = await pollSelfPosts();
+      return c.json(result);
+    })
+    .post("/labels/republish", trustedOrigin(auth.publicUrl), validateRepublishInput, async (c) => {
+      const { uri } = c.req.valid("json");
+      const result = await republishLabel(uri);
+      if (!result) return c.json({ error: "Label not found" }, 404);
+
+      audit("label.republished", { actor: auth.adminDid, uri, seq: result.seq });
       return c.json(result);
     });
 }

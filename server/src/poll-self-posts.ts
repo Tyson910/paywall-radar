@@ -78,7 +78,7 @@ export async function pollSelfPosts({
     });
 
     if (inserted) {
-      labelStream.publish(inserted.id, signed);
+      labelStream.publish(inserted.seq, signed);
       labeled++;
     }
   }

@@ -96,11 +96,16 @@ describe("createApp", () => {
       revoke: async () => undefined,
     };
     const patterns = await loadDomainPatterns(db);
+    let republishedUri: string | undefined;
     const adminDeps = {
       db,
       auth,
       patterns,
       pollSelfPosts: async () => ({ posts: 0, labeled: 0 }),
+      republishLabel: async (uri: string) => {
+        republishedUri = uri;
+        return { seq: 50_315 };
+      },
     };
     const app = createApp({ db, labelStream: new LabelStream(), auth, adminDeps });
 
@@ -133,6 +138,16 @@ describe("createApp", () => {
     });
     expect(removed.status).toBe(200);
     expect(patterns).not.toContain("*.example.com");
+
+    const labelUri = "at://did:plc:example/app.bsky.feed.post/abc123";
+    const republished = await app.request("/api/admin/labels/republish", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ uri: labelUri }),
+    });
+    expect(republished.status).toBe(200);
+    await expect(republished.json()).resolves.toEqual({ seq: 50_315 });
+    expect(republishedUri).toBe(labelUri);
   });
 
   it("sets an admin session after the OAuth callback", async () => {

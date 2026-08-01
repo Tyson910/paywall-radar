@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 
 import { openDatabase } from "./connection.js";
 import { initializeDatabase } from "./initialize.js";
-import { recordLabel } from "./labels.js";
-import { labels } from "./models.js";
+import { publishLabelRevision, recordLabel } from "./labels.js";
+import { labelEvents, labels } from "./models.js";
 
 const fakeSig = new Uint8Array(64);
 
@@ -33,13 +33,28 @@ describe("recordLabel", () => {
         };
 
         const first = await recordLabel(db, label);
-        expect(first).toEqual({ id: expect.any(Number) });
+        expect(first).toEqual({ id: expect.any(Number), seq: expect.any(Number) });
 
         const second = await recordLabel(db, label);
         expect(second).toBeNull();
 
         const [result] = await db.select({ count: count() }).from(labels);
         expect(result?.count).toBe(1);
+        const [eventResult] = await db.select({ count: count() }).from(labelEvents);
+        expect(eventResult?.count).toBe(1);
+
+        const revision = await publishLabelRevision(db, {
+          ver: 1,
+          src: label.src,
+          uri: label.uri,
+          val: label.val,
+          cts: "2026-08-01T21:00:00.000Z",
+          sig: new Uint8Array(64).fill(1),
+        });
+
+        expect(revision).toEqual({ id: first!.id, seq: first!.seq + 1 });
+        const [revisedEventResult] = await db.select({ count: count() }).from(labelEvents);
+        expect(revisedEventResult?.count).toBe(2);
       } finally {
         client.close();
       }

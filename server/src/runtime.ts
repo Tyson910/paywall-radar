@@ -7,7 +7,7 @@ import { createAuthService } from "./auth.js";
 import { openDatabase } from "./database/connection.js";
 import { recordFailedEvent } from "./database/failed-events.js";
 import { initializeDatabase } from "./database/initialize.js";
-import { recordLabel } from "./database/labels.js";
+import { loadLabelByUri, publishLabelRevision, recordLabel } from "./database/labels.js";
 import {
   loadDomainPatterns,
   loadJetstreamCursorState,
@@ -63,6 +63,28 @@ export async function startRuntime(): Promise<Runtime> {
         auth,
         patterns,
         pollSelfPosts: () => pollSelfPosts(pollDeps),
+        republishLabel: async (uri) => {
+          const existing = await loadLabelByUri(db, uri);
+          if (!existing) return null;
+
+          const signed = await signLabel(
+            {
+              src: options.did,
+              uri: existing.uri,
+              val: existing.val,
+              cts: new Date().toISOString(),
+              ...(existing.cid != null && { cid: existing.cid }),
+              ...(existing.exp != null && { exp: existing.exp }),
+              ...(existing.neg && { neg: true }),
+            },
+            keypair,
+          );
+          const published = await publishLabelRevision(db, signed);
+          if (!published) return null;
+
+          labelStream.publish(published.seq, signed);
+          return { seq: published.seq };
+        },
       },
       ...(options.clientDir != null && { clientDir: options.clientDir }),
     });
@@ -87,7 +109,7 @@ export async function startRuntime(): Promise<Runtime> {
       });
 
       if (inserted) {
-        labelStream.publish(inserted.id, signed);
+        labelStream.publish(inserted.seq, signed);
       }
     };
 

@@ -14,14 +14,14 @@ import { secureHeaders } from "hono/secure-headers";
 import type { AdminRoutesDeps } from "./admin-routes.js";
 import type { AuthService } from "./auth.js";
 import type { Database } from "./database/connection.js";
-import type { LabelRow } from "./database/models.js";
+import type { LabelEventRow } from "./database/models.js";
 import type { LabelStream } from "./label-stream.js";
 import type { SignedLabel } from "./labeler.js";
 
 import { createAdminRoutes } from "./admin-routes.js";
 import { createAuthRoutes } from "./auth-routes.js";
-import { labels } from "./database/models.js";
-import { formatLabelForHttp, encodeLabelsFrame } from "./labeler.js";
+import { labelEvents } from "./database/models.js";
+import { encodeLabelsFrame, formatLabelForHttp } from "./labeler.js";
 import { log as defaultLog } from "./logger.js";
 import { createDashboardRoutes } from "./routes.js";
 
@@ -34,7 +34,7 @@ export interface AppOptions {
   log?: Logger;
 }
 
-function rowToSignedLabel(row: LabelRow): SignedLabel {
+function rowToSignedLabel(row: LabelEventRow): SignedLabel {
   return {
     ver: 1,
     src: row.src,
@@ -88,12 +88,17 @@ export function createApp({
     const cursorParam = c.req.query("cursor");
     const limitParam = c.req.query("limit");
     const limit = Math.min(Math.max(Number(limitParam) || 50, 1), 250);
-    const afterId = cursorParam ? Number(cursorParam) : 0;
+    const afterSeq = cursorParam ? Number(cursorParam) : 0;
 
-    const rows = await db.select().from(labels).where(gt(labels.id, afterId)).limit(limit);
+    const rows = await db
+      .select()
+      .from(labelEvents)
+      .where(gt(labelEvents.seq, afterSeq))
+      .orderBy(labelEvents.seq)
+      .limit(limit);
     const formatted = rows.map((row) => formatLabelForHttp(rowToSignedLabel(row)));
     const lastRow = rows[rows.length - 1];
-    const nextCursor = lastRow ? String(lastRow.id) : (cursorParam ?? undefined);
+    const nextCursor = lastRow ? String(lastRow.seq) : (cursorParam ?? undefined);
 
     return c.json({ cursor: nextCursor, labels: formatted });
   });
@@ -119,9 +124,9 @@ export function createApp({
               try {
                 const rows = await db
                   .select()
-                  .from(labels)
-                  .where(gt(labels.id, requestedCursor))
-                  .orderBy(labels.id);
+                  .from(labelEvents)
+                  .where(gt(labelEvents.seq, requestedCursor))
+                  .orderBy(labelEvents.seq);
 
                 log.info(
                   {
@@ -133,7 +138,7 @@ export function createApp({
                 );
 
                 for (const row of rows) {
-                  const frame = encodeLabelsFrame(row.id, rowToSignedLabel(row));
+                  const frame = encodeLabelsFrame(row.seq, rowToSignedLabel(row));
                   ws.send(new Uint8Array(frame) as Uint8Array<ArrayBuffer>);
                 }
 
@@ -142,7 +147,7 @@ export function createApp({
                     event: "label_stream_replay_completed",
                     cursor: requestedCursor,
                     labelCount: rows.length,
-                    lastSequence: rows.at(-1)?.id,
+                    lastSequence: rows.at(-1)?.seq,
                   },
                   "Label stream replay completed",
                 );

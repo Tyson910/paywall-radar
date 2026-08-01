@@ -9,6 +9,7 @@ import {
   deleteDomain as deleteDomainRequest,
   logout as logoutRequest,
   pollSelfPosts,
+  republishLabel as republishLabelRequest,
   sessionQueryOptions,
 } from "../api.js";
 
@@ -17,6 +18,7 @@ export function DomainAdmin() {
   const navigate = useNavigate();
   const domains = useQuery(adminDomainsQueryOptions());
   const [pattern, setPattern] = useState("");
+  const [labelUri, setLabelUri] = useState("");
 
   const refreshDomains = async () => {
     await queryClient.invalidateQueries({ queryKey: adminDomainsQueryOptions().queryKey });
@@ -41,6 +43,10 @@ export function DomainAdmin() {
     },
   });
   const poll = useMutation({ mutationFn: pollSelfPosts });
+  const republish = useMutation({
+    mutationFn: republishLabelRequest,
+    onSuccess: () => setLabelUri(""),
+  });
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
@@ -130,11 +136,48 @@ export function DomainAdmin() {
             </p>
           )}
           {poll.isError && (
-            <p className="text-sm text-red-600">
-              {apiErrorMessage(poll.error, "Poll failed")}
-            </p>
+            <p className="text-sm text-red-600">{apiErrorMessage(poll.error, "Poll failed")}</p>
           )}
         </div>
+      </div>
+
+      <div className="mt-10">
+        <h2 className="text-lg font-semibold">Republish a label</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Re-sign an existing label and append it at a new publication sequence.
+        </p>
+        <form
+          className="mt-3 flex gap-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            republish.mutate(labelUri);
+          }}
+        >
+          <input
+            value={labelUri}
+            onChange={(event) => setLabelUri(event.target.value)}
+            placeholder="at://did:plc:…/app.bsky.feed.post/…"
+            required
+            className="min-w-0 flex-1 rounded-lg border border-neutral-300 bg-white px-4 py-3 dark:border-neutral-700 dark:bg-neutral-900"
+          />
+          <button
+            type="submit"
+            disabled={republish.isPending}
+            className="rounded-lg bg-blue-600 px-5 py-3 font-medium text-white disabled:opacity-60"
+          >
+            {republish.isPending ? "Republishing…" : "Republish"}
+          </button>
+        </form>
+        {republish.isSuccess && (
+          <p className="mt-3 text-sm text-neutral-600 dark:text-neutral-400">
+            Published at sequence {republish.data.seq}
+          </p>
+        )}
+        {republish.isError && (
+          <p className="mt-3 text-sm text-red-600">
+            {apiErrorMessage(republish.error, "Republish failed")}
+          </p>
+        )}
       </div>
     </main>
   );
