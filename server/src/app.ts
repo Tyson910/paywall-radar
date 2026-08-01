@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 import type { WSContext } from "hono/ws";
+import type { Logger } from "pino";
 
 import { upgradeWebSocket } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
@@ -21,6 +22,7 @@ import { createAdminRoutes } from "./admin-routes.js";
 import { createAuthRoutes } from "./auth-routes.js";
 import { labels } from "./database/models.js";
 import { formatLabelForHttp, encodeLabelsFrame } from "./labeler.js";
+import { log as defaultLog } from "./logger.js";
 import { createDashboardRoutes } from "./routes.js";
 
 export interface AppOptions {
@@ -29,6 +31,7 @@ export interface AppOptions {
   clientDir?: string;
   auth?: AuthService;
   adminDeps?: AdminRoutesDeps;
+  log?: Logger;
 }
 
 function rowToSignedLabel(row: LabelRow): SignedLabel {
@@ -45,7 +48,14 @@ function rowToSignedLabel(row: LabelRow): SignedLabel {
   };
 }
 
-export function createApp({ db, labelStream, clientDir, auth, adminDeps }: AppOptions): Hono {
+export function createApp({
+  db,
+  labelStream,
+  clientDir,
+  auth,
+  adminDeps,
+  log = defaultLog,
+}: AppOptions): Hono {
   const app = new Hono();
 
   app.use("*", logger());
@@ -99,26 +109,73 @@ export function createApp({ db, labelStream, clientDir, auth, adminDeps }: AppOp
         onOpen(_event, ws) {
           subscriber = ws;
           labelStream.add(ws);
+          log.info(
+            { event: "label_stream_opened", cursor: requestedCursor },
+            "Label stream opened",
+          );
 
           if (requestedCursor != null) {
             void (async () => {
-              const rows = await db
-                .select()
-                .from(labels)
-                .where(gt(labels.id, requestedCursor))
-                .orderBy(labels.id);
+              try {
+                const rows = await db
+                  .select()
+                  .from(labels)
+                  .where(gt(labels.id, requestedCursor))
+                  .orderBy(labels.id);
 
-              for (const row of rows) {
-                const frame = encodeLabelsFrame(row.id, rowToSignedLabel(row));
-                ws.send(new Uint8Array(frame) as Uint8Array<ArrayBuffer>);
+                log.info(
+                  {
+                    event: "label_stream_replay_started",
+                    cursor: requestedCursor,
+                    labelCount: rows.length,
+                  },
+                  "Label stream replay started",
+                );
+
+                for (const row of rows) {
+                  const frame = encodeLabelsFrame(row.id, rowToSignedLabel(row));
+                  ws.send(new Uint8Array(frame) as Uint8Array<ArrayBuffer>);
+                }
+
+                log.info(
+                  {
+                    event: "label_stream_replay_completed",
+                    cursor: requestedCursor,
+                    labelCount: rows.length,
+                    lastSequence: rows.at(-1)?.id,
+                  },
+                  "Label stream replay completed",
+                );
+              } catch (error) {
+                log.error(
+                  { event: "label_stream_replay_failed", cursor: requestedCursor, err: error },
+                  "Label stream replay failed",
+                );
+                ws.close(1011, "label replay failed");
               }
             })();
           }
         },
-        onClose() {
+        onError(event) {
+          log.error(
+            { event: "label_stream_error", cursor: requestedCursor, websocketEvent: event.type },
+            "Label stream error",
+          );
+        },
+        onClose(event) {
           if (subscriber) {
             labelStream.remove(subscriber);
           }
+          log.info(
+            {
+              event: "label_stream_closed",
+              cursor: requestedCursor,
+              code: event.code,
+              reason: event.reason,
+              clean: event.wasClean,
+            },
+            "Label stream closed",
+          );
         },
       };
     }),

@@ -1,10 +1,5 @@
+import { log } from "./logger.js";
+
 export function audit(event: string, details: Record<string, unknown> = {}): void {
-  console.info(
-    JSON.stringify({
-      type: "audit",
-      event,
-      timestamp: new Date().toISOString(),
-      ...details,
-    }),
-  );
+  log.info({ type: "audit", event, ...details }, event);
 }
