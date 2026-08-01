@@ -19,7 +19,24 @@ describe("recordFailedEvent", () => {
       await initializeDatabase(databasePath);
       const connection = openDatabase(databasePath);
 
-      for (let index = 0; index < 1_005; index += 1) {
+      for (let start = 0; start < 10_000; start += 500) {
+        await connection.db.insert(failedEvents).values(
+          Array.from({ length: 500 }, (_, offset) => {
+            const index = start + offset;
+            return {
+              cursorUs: index,
+              did: "did:plc:example",
+              collection: "app.bsky.feed.post",
+              rkey: `post-${index}`,
+              reason: "invalid_post_event: missing record",
+              payload: `payload-${index}`,
+              createdAt: new Date().toISOString(),
+            };
+          }),
+        );
+      }
+
+      for (let index = 10_000; index < 10_005; index += 1) {
         await recordFailedEvent(connection.db, {
           cursorUs: index,
           did: "did:plc:example",
@@ -37,7 +54,7 @@ describe("recordFailedEvent", () => {
         .orderBy(asc(failedEvents.id))
         .limit(1);
 
-      expect(total?.value).toBe(1_000);
+      expect(total?.value).toBe(10_000);
       expect(oldest?.cursorUs).toBe(5);
       expect(oldest?.rkey).toBe("post-5");
       connection.client.close();
