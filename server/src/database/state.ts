@@ -4,7 +4,7 @@ import { parseDomainPatterns, type DomainPattern } from "../domains.js";
 
 import type { Database } from "./connection.js";
 
-import { cursor, domains } from "./models.js";
+import { cursor, domains, jetstreamCursors } from "./models.js";
 
 export interface CursorState {
   cursorUs: number;
@@ -34,6 +34,36 @@ export async function saveCursorState(db: Database, state: CursorState): Promise
     .values({ id: 1, ...state })
     .onConflictDoUpdate({
       target: cursor.id,
+      set: state,
+    });
+}
+
+export async function loadJetstreamCursorState(db: Database, source: string): Promise<CursorState> {
+  const [row] = await db
+    .select({
+      cursorUs: jetstreamCursors.cursorUs,
+      postsScanned: jetstreamCursors.postsScanned,
+    })
+    .from(jetstreamCursors)
+    .where(eq(jetstreamCursors.source, source));
+
+  if (row) return row;
+
+  const legacyState = await loadCursorState(db);
+  await saveJetstreamCursorState(db, source, legacyState);
+  return legacyState;
+}
+
+export async function saveJetstreamCursorState(
+  db: Database,
+  source: string,
+  state: CursorState,
+): Promise<void> {
+  await db
+    .insert(jetstreamCursors)
+    .values({ source, ...state })
+    .onConflictDoUpdate({
+      target: jetstreamCursors.source,
       set: state,
     });
 }

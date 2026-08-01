@@ -6,7 +6,13 @@ import { describe, expect, it } from "vitest";
 
 import { openDatabase } from "./connection.js";
 import { initializeDatabase } from "./initialize.js";
-import { loadCursorState, loadDomainPatterns, saveCursorState } from "./state.js";
+import {
+  loadCursorState,
+  loadDomainPatterns,
+  loadJetstreamCursorState,
+  saveCursorState,
+  saveJetstreamCursorState,
+} from "./state.js";
 
 describe("database state", () => {
   it("loads domains and persists cursor progress", async () => {
@@ -31,6 +37,29 @@ describe("database state", () => {
         expect(await loadCursorState(db)).toEqual({
           cursorUs: 1_725_519_626_134_432,
           postsScanned: 42,
+        });
+
+        expect(await loadJetstreamCursorState(db, "us-east-2")).toEqual({
+          cursorUs: 1_725_519_626_134_432,
+          postsScanned: 42,
+        });
+        expect(await loadJetstreamCursorState(db, "us-west-2")).toEqual({
+          cursorUs: 1_725_519_626_134_432,
+          postsScanned: 42,
+        });
+
+        await saveJetstreamCursorState(db, "us-west-2", {
+          cursorUs: 1_725_519_626_134_500,
+          postsScanned: 43,
+        });
+
+        expect(await loadJetstreamCursorState(db, "us-east-2")).toEqual({
+          cursorUs: 1_725_519_626_134_432,
+          postsScanned: 42,
+        });
+        expect(await loadJetstreamCursorState(db, "us-west-2")).toEqual({
+          cursorUs: 1_725_519_626_134_500,
+          postsScanned: 43,
         });
       } finally {
         client.close();

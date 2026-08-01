@@ -4,7 +4,7 @@ import type { DashboardSnapshot, MonitoredDomain, RecentLabelsPage } from "#shar
 
 import type { Database } from "./connection.js";
 
-import { cursor, domains, labels } from "./models.js";
+import { cursor, domains, jetstreamCursors, labels } from "./models.js";
 
 export async function getDashboardSnapshot(db: Database): Promise<DashboardSnapshot> {
   const [stats, volume, topDomains, recentLabels] = await Promise.all([
@@ -18,7 +18,10 @@ export async function getDashboardSnapshot(db: Database): Promise<DashboardSnaps
 }
 
 async function getStatsSummary(db: Database) {
-  const [cursorRow] = await db.select({ postsScanned: cursor.postsScanned }).from(cursor);
+  const [[jetstreamRow], [cursorRow]] = await Promise.all([
+    db.select({ postsScanned: max(jetstreamCursors.postsScanned) }).from(jetstreamCursors),
+    db.select({ postsScanned: cursor.postsScanned }).from(cursor),
+  ]);
 
   const [labelsRow] = await db
     .select({
@@ -28,7 +31,7 @@ async function getStatsSummary(db: Database) {
     .from(labels);
 
   return {
-    postsScanned: cursorRow?.postsScanned ?? 0,
+    postsScanned: jetstreamRow?.postsScanned ?? cursorRow?.postsScanned ?? 0,
     labelsEmitted: labelsRow?.labelsEmitted ?? 0,
     lastEventAt: labelsRow?.lastEventAt ?? null,
   };

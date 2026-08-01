@@ -1,6 +1,6 @@
 import type { Client } from "@libsql/client";
 
-import type { JetstreamConsumer } from "./jetstream-consumer.js";
+import type { JetstreamConsumer, JetstreamConsumerOptions } from "./jetstream-consumer.js";
 
 import { createApp } from "./app.js";
 import { createAuthService } from "./auth.js";
@@ -8,9 +8,14 @@ import { openDatabase } from "./database/connection.js";
 import { recordFailedEvent } from "./database/failed-events.js";
 import { initializeDatabase } from "./database/initialize.js";
 import { recordLabel } from "./database/labels.js";
-import { loadCursorState, loadDomainPatterns, saveCursorState } from "./database/state.js";
+import {
+  loadDomainPatterns,
+  loadJetstreamCursorState,
+  saveJetstreamCursorState,
+} from "./database/state.js";
 import { loadRuntimeEnv } from "./env.js";
 import { startJetstreamConsumer } from "./jetstream-consumer.js";
+import { defaultJetstreamSources } from "./jetstream.js";
 import { LabelStream } from "./label-stream.js";
 import { loadSigningKey, signLabel } from "./labeler.js";
 import { pollSelfPosts } from "./poll-self-posts.js";
@@ -27,7 +32,7 @@ export async function startRuntime(): Promise<Runtime> {
   console.log(`Database initialized with ${domainCount} domain patterns`);
 
   let client: Client | undefined;
-  let consumer: JetstreamConsumer | undefined;
+  const consumers: JetstreamConsumer[] = [];
   const labelStream = new LabelStream();
 
   try {
@@ -35,9 +40,9 @@ export async function startRuntime(): Promise<Runtime> {
     client = connection.client;
     const { db } = connection;
 
-    const [patterns, initialState, keypair, auth] = await Promise.all([
+    const [patterns, initialStates, keypair, auth] = await Promise.all([
       loadDomainPatterns(db),
-      loadCursorState(db),
+      Promise.all(defaultJetstreamSources.map((source) => loadJetstreamCursorState(db, source.id))),
       loadSigningKey(options.signingKey),
       createAuthService(db, {
         adminDid: options.adminDid,
@@ -62,35 +67,43 @@ export async function startRuntime(): Promise<Runtime> {
       ...(options.clientDir != null && { clientDir: options.clientDir }),
     });
 
-    consumer = startJetstreamConsumer({
-      initialState,
-      patterns,
-      handlePost: async (result) => {
-        if (!result.action) return;
+    const handlePost: JetstreamConsumerOptions["handlePost"] = async (result) => {
+      if (!result.action) return;
 
-        const signed = await signLabel(
-          {
-            src: options.did,
-            uri: result.postUri,
-            val: result.action.val,
-            cts: new Date().toISOString(),
-          },
-          keypair,
-        );
-        const inserted = await recordLabel(db, {
-          ...signed,
-          domain: result.action.domain,
-          authorDid: result.authorDid,
-          postText: result.postText,
-        });
+      const signed = await signLabel(
+        {
+          src: options.did,
+          uri: result.postUri,
+          val: result.action.val,
+          cts: new Date().toISOString(),
+        },
+        keypair,
+      );
+      const inserted = await recordLabel(db, {
+        ...signed,
+        domain: result.action.domain,
+        authorDid: result.authorDid,
+        postText: result.postText,
+      });
 
-        if (inserted) {
-          labelStream.publish(inserted.id, signed);
-        }
-      },
-      recordFailure: (failure) => recordFailedEvent(db, failure),
-      saveState: (state) => saveCursorState(db, state),
-    });
+      if (inserted) {
+        labelStream.publish(inserted.id, signed);
+      }
+    };
+
+    consumers.push(
+      ...defaultJetstreamSources.map((source, index) =>
+        startJetstreamConsumer({
+          initialState: initialStates[index]!,
+          patterns,
+          handlePost,
+          recordFailure: (failure) => recordFailedEvent(db, failure),
+          saveState: (state) => saveJetstreamCursorState(db, source.id, state),
+          sourceId: source.id,
+          endpoint: source.endpoint,
+        }),
+      ),
+    );
 
     let stopped = false;
     return {
@@ -100,13 +113,13 @@ export async function startRuntime(): Promise<Runtime> {
         if (stopped) return;
         stopped = true;
 
-        await consumer?.stop();
+        await Promise.all(consumers.map((consumer) => consumer.stop()));
         labelStream.close();
         client?.close();
       },
     };
   } catch (error) {
-    await consumer?.stop();
+    await Promise.all(consumers.map((consumer) => consumer.stop()));
     labelStream.close();
     client?.close();
     throw error;

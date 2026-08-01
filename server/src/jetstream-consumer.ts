@@ -41,7 +41,9 @@ export interface JetstreamConsumerOptions {
   handlePost(result: PostResult): Promise<void>;
   recordFailure?(failure: FailedJetstreamEvent): Promise<void>;
   saveState(state: CursorState): Promise<void>;
+  sourceId?: string;
   endpoint?: string;
+  cursorRewindUs?: number;
   flushIntervalMs?: number;
   reconnectDelayMs?: number;
   logger?: Logger;
@@ -79,6 +81,8 @@ function createWebSocket(url: string): JetstreamSocket {
 
 export function startJetstreamConsumer(options: JetstreamConsumerOptions): JetstreamConsumer {
   const endpoint = options.endpoint ?? defaultJetstreamEndpoint;
+  const sourceId = options.sourceId ?? endpoint;
+  const cursorRewindUs = options.cursorRewindUs ?? 10_000_000;
   const flushIntervalMs = options.flushIntervalMs ?? 5_000;
   const reconnectDelayMs = options.reconnectDelayMs ?? 1_000;
   const logger = options.logger ?? console;
@@ -113,6 +117,8 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
   }
 
   function advanceState(cursorUs: number, postWasScanned: boolean): void {
+    if (cursorUs <= state.cursorUs) return;
+
     state = {
       cursorUs,
       postsScanned: state.postsScanned + (postWasScanned ? 1 : 0),
@@ -135,6 +141,7 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
     logger.warn(
       JSON.stringify({
         event: "jetstream_event_failed",
+        source: sourceId,
         reason: failure.reason,
         cursorUs: failure.cursorUs,
         did: failure.did,
@@ -155,12 +162,13 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
       return;
     }
 
-    const socket = makeSocket(buildJetstreamUrl(endpoint, state.cursorUs));
+    const resumeCursorUs = Math.max(0, state.cursorUs - cursorRewindUs);
+    const socket = makeSocket(buildJetstreamUrl(endpoint, resumeCursorUs));
     activeSocket = socket;
     let connectionFailed = false;
 
-    socket.onOpen(() => logger.info("Connected to Jetstream"));
-    socket.onError((error) => logger.error("Jetstream socket error", error));
+    socket.onOpen(() => logger.info(`Connected to Jetstream source ${sourceId}`));
+    socket.onError((error) => logger.error(`Jetstream socket error (${sourceId})`, error));
     socket.onClose(() => {
       if (activeSocket === socket) {
         activeSocket = null;
@@ -217,7 +225,7 @@ export function startJetstreamConsumer(options: JetstreamConsumerOptions): Jetst
         })
         .catch((error: unknown) => {
           connectionFailed = true;
-          logger.error("Failed to process Jetstream message", error);
+          logger.error(`Failed to process Jetstream message (${sourceId})`, error);
           socket.close();
         });
     });

@@ -80,6 +80,7 @@ describe("startJetstreamConsumer", () => {
       saveState: async (state) => {
         saved.push(state);
       },
+      cursorRewindUs: 10,
       createSocket: (url) => {
         urls.push(url);
         const socket = new FakeSocket();
@@ -101,8 +102,32 @@ describe("startJetstreamConsumer", () => {
 
     sockets[0]!.close();
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(urls[1]).toContain("cursor=300");
+    expect(urls[0]).toContain("cursor=90");
+    expect(urls[1]).toContain("cursor=290");
 
+    await consumer.stop();
+  });
+
+  it("reprocesses rewind overlap without moving the cursor backward or recounting posts", async () => {
+    const socket = new FakeSocket();
+    const handled: number[] = [];
+    const consumer = startJetstreamConsumer({
+      initialState: { cursorUs: 300, postsScanned: 5 },
+      patterns: [],
+      handlePost: async (post) => {
+        handled.push(post.cursorUs);
+      },
+      saveState: vi.fn(),
+      createSocket: () => socket,
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    });
+
+    socket.emitMessage(createPost(295, "overlap"));
+    socket.emitMessage(createPost(310, "new"));
+    await settlePromises();
+
+    expect(handled).toEqual([295, 310]);
+    expect(consumer.getState()).toEqual({ cursorUs: 310, postsScanned: 6 });
     await consumer.stop();
   });
 

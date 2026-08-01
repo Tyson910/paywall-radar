@@ -4,7 +4,18 @@ import type { DomainPattern } from "./domains.js";
 
 import { processPost, type LabelAction } from "./pipeline.js";
 
-export const defaultJetstreamEndpoint = "wss://jetstream2.us-east.bsky.network/subscribe";
+export const defaultJetstreamSources = [
+  {
+    id: "us-east-2",
+    endpoint: "wss://jetstream2.us-east.bsky.network/subscribe",
+  },
+  {
+    id: "us-west-2",
+    endpoint: "wss://jetstream2.us-west.bsky.network/subscribe",
+  },
+] as const;
+
+export const defaultJetstreamEndpoint = defaultJetstreamSources[0].endpoint;
 
 export type JetstreamMessageResult =
   | {

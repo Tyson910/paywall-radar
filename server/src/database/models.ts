@@ -38,6 +38,12 @@ export const cursor = sqliteTable(
   (table) => [check("cursor_single_row_check", sql`${table.id} = 1`)],
 );
 
+export const jetstreamCursors = sqliteTable("jetstream_cursors", {
+  source: text().primaryKey(),
+  cursorUs: integer("cursor_us").notNull(),
+  postsScanned: integer("posts_scanned").notNull().default(0),
+});
+
 export const failedEvents = sqliteTable(
   "failed_events",
   {
@@ -79,4 +85,5 @@ export type DomainRow = typeof domains.$inferSelect;
 export type NewDomainRow = typeof domains.$inferInsert;
 export type LabelRow = typeof labels.$inferSelect;
 export type CursorRow = typeof cursor.$inferSelect;
+export type JetstreamCursorRow = typeof jetstreamCursors.$inferSelect;
 export type FailedEventRow = typeof failedEvents.$inferSelect;
