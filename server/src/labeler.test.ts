@@ -1,5 +1,5 @@
-import { Secp256k1Keypair } from "@atproto/crypto";
-import { decodeAll } from "@atproto/lex-cbor";
+import { Secp256k1Keypair, verifySignature } from "@atproto/crypto";
+import { type LexValue, decodeAll, encode } from "@atproto/lex-cbor";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -25,9 +25,17 @@ describe("signLabel", () => {
     );
 
     expect(signed.ver).toBe(1);
-    expect(signed.neg).toBe(false);
+    expect(signed).not.toHaveProperty("neg");
     expect(signed.sig).toBeInstanceOf(Uint8Array);
     expect(signed.sig.length).toBe(64);
+    const bytes = encode({
+      ver: 1,
+      src: signed.src,
+      uri: signed.uri,
+      val: signed.val,
+      cts: signed.cts,
+    } as LexValue);
+    await expect(verifySignature(keypair.did(), bytes, signed.sig)).resolves.toBe(true);
   });
 
   it("excludes undefined optional fields", async () => {
@@ -83,6 +91,9 @@ describe("encodeLabelsFrame", () => {
     expect(chunks[0]).toEqual({ op: 1, t: "#labels" });
     expect((chunks[1] as { seq: number }).seq).toBe(42);
     expect((chunks[1] as { labels: unknown[] }).labels).toHaveLength(1);
+    expect((chunks[1] as { labels: Record<string, unknown>[] }).labels[0]).not.toHaveProperty(
+      "neg",
+    );
   });
 });
 
@@ -115,5 +126,6 @@ describe("formatLabelForHttp", () => {
     expect(http.src).toBe("did:plc:test");
     expect(http).not.toHaveProperty("cid");
     expect(http).not.toHaveProperty("exp");
+    expect(http).not.toHaveProperty("neg");
   });
 });

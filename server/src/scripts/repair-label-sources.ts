@@ -4,11 +4,14 @@ import { count, eq } from "drizzle-orm";
 
 import { openDatabase } from "../database/connection.js";
 import { labels } from "../database/models.js";
-import { repairLabelSources } from "../database/repair-label-sources.js";
+import { prepareLabelRepair, repairLabelSources } from "../database/repair-label-sources.js";
 import { loadSigningKey } from "../labeler.js";
 
 const write = process.argv.slice(2).includes("--write");
-const unknownArguments = process.argv.slice(2).filter((argument) => argument !== "--write");
+const resequence = process.argv.slice(2).includes("--resequence");
+const unknownArguments = process.argv
+  .slice(2)
+  .filter((argument) => argument !== "--write" && argument !== "--resequence");
 if (unknownArguments.length > 0) {
   throw new Error(`Unknown argument(s): ${unknownArguments.join(", ")}`);
 }
@@ -36,13 +39,19 @@ if (correctSource === incorrectSource) {
 const { client, db } = openDatabase(databasePath);
 
 try {
+  if (write) await prepareLabelRepair(db);
   console.log(`Database: ${databasePath}`);
   console.log(`Incorrect source: ${incorrectSource}`);
   console.log(`Correct source: ${correctSource}`);
 
   const result = await repairLabelSources(
     db,
-    { fromSource: incorrectSource, toSource: correctSource, signer: keypair },
+    {
+      fromSource: incorrectSource,
+      toSource: correctSource,
+      signer: keypair,
+      resequence,
+    },
     write,
   );
 
@@ -54,7 +63,11 @@ try {
   );
 
   if (!write) {
-    console.log("Dry run only. Stop the app, back up the database, then rerun with --write.");
+    console.log(
+      "Dry run only. Stop the app, back up the database, then rerun with --write --resequence.",
+    );
+  } else if (result.alreadyCompleted) {
+    console.log("Canonical label repair was already completed; no changes made.");
   } else {
     const [remaining] = await db
       .select({ count: count() })
@@ -65,6 +78,11 @@ try {
       throw new Error(`${String(remaining?.count)} label(s) still have the incorrect source`);
     }
     console.log(`Re-signed and updated ${String(result.repaired)} label(s). Verification passed.`);
+    if (result.newFirstId != null) {
+      console.log(
+        `Republished repaired history at sequences ${String(result.newFirstId)}-${String(result.newLastId)}.`,
+      );
+    }
   }
 } finally {
   client.close();

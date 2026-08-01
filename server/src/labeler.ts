@@ -16,7 +16,7 @@ export interface SignedLabel {
   src: string;
   uri: string;
   val: string;
-  neg: boolean;
+  neg?: boolean;
   cts: string;
   cid?: string;
   exp?: string;
@@ -49,7 +49,7 @@ export async function signLabel(
     uri: unsigned.uri,
     cid: unsigned.cid,
     val: unsigned.val,
-    neg: !!unsigned.neg,
+    neg: unsigned.neg === true ? true : undefined,
     cts: unsigned.cts,
     exp: unsigned.exp,
   });
@@ -62,10 +62,10 @@ export async function signLabel(
     src: unsigned.src,
     uri: unsigned.uri,
     val: unsigned.val,
-    neg: !!unsigned.neg,
     cts: unsigned.cts,
     sig,
   };
+  if (unsigned.neg === true) result.neg = true;
   if (unsigned.cid != null) result.cid = unsigned.cid;
   if (unsigned.exp != null) result.exp = unsigned.exp;
   return result;
@@ -85,7 +85,7 @@ function toLabelLex(label: SignedLabel): LexValue {
     uri: label.uri,
     cid: label.cid,
     val: label.val,
-    neg: label.neg,
+    neg: label.neg === true ? true : undefined,
     cts: label.cts,
     exp: label.exp,
     sig: label.sig,
@@ -112,7 +112,7 @@ export function formatLabelForHttp(label: SignedLabel): Record<string, unknown> 
     uri: label.uri,
     cid: label.cid,
     val: label.val,
-    neg: label.neg,
+    neg: label.neg === true ? true : undefined,
     cts: label.cts,
     exp: label.exp,
     sig: { $bytes: base64 },

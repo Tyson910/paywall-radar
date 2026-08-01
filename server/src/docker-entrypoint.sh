@@ -25,8 +25,8 @@ fi
 case "${REPAIR_LABEL_SOURCES_ON_START:-}" in
   "") ;;
   1)
-    echo "Repairing historical label sources before startup..."
-    run_once_as_appuser node /app/dist/server/scripts/repair-label-sources.js --write
+    echo "Canonicalizing and republishing historical labels before startup..."
+    run_once_as_appuser node /app/dist/server/scripts/repair-label-sources.js --write --resequence
     ;;
   *)
     echo "REPAIR_LABEL_SOURCES_ON_START must be 1 when set" >&2
