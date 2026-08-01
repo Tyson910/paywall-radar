@@ -9,9 +9,30 @@ run_as_appuser() {
   exec "$@"
 }
 
+run_once_as_appuser() {
+  if [ "$(id -u)" -eq 0 ]; then
+    runuser -u appuser -- "$@"
+    return
+  fi
+
+  "$@"
+}
+
 if [ "$(id -u)" -eq 0 ]; then
   chown -R appuser:appuser /app/data
 fi
+
+case "${REPAIR_LABEL_SOURCES_ON_START:-}" in
+  "") ;;
+  1)
+    echo "Repairing historical label sources before startup..."
+    run_once_as_appuser node /app/dist/server/scripts/repair-label-sources.js --write
+    ;;
+  *)
+    echo "REPAIR_LABEL_SOURCES_ON_START must be 1 when set" >&2
+    exit 1
+    ;;
+esac
 
 # Reset stale Litestream state during entrypoint execution
 if [ -n "$LITESTREAM_REPLICA_URL" ]; then

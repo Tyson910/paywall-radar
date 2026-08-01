@@ -16,6 +16,7 @@
     "db:clone:production": "bash scripts/clone-production-db.sh",
     "db:init": "tsx --env-file=.env server/src/scripts/initialize-database.ts",
     "labeler:setup": "tsx --env-file=.env server/src/scripts/setup-labeler.ts",
+    "labels:repair-source": "tsx --env-file=.env server/src/scripts/repair-label-sources.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "format": "oxfmt .",

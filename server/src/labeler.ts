@@ -23,6 +23,10 @@ export interface SignedLabel {
   sig: Uint8Array;
 }
 
+export interface LabelSigner {
+  sign(bytes: Uint8Array): Promise<Uint8Array>;
+}
+
 export async function loadSigningKey(key: string): Promise<Secp256k1Keypair> {
   return Secp256k1Keypair.import(key, { exportable: false });
 }
@@ -37,7 +41,7 @@ function excludeNullish(obj: Record<string, unknown>): Record<string, unknown> {
 
 export async function signLabel(
   unsigned: UnsignedLabel,
-  keypair: Secp256k1Keypair,
+  keypair: LabelSigner,
 ): Promise<SignedLabel> {
   const toSign = excludeNullish({
     ver: 1,
