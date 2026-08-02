@@ -1,9 +1,11 @@
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 
 import type { RecentLabel } from "#shared/schemas.js";
 
 import { labelsQueryOptions } from "../api.js";
 import { blueskyPostUrl } from "../bluesky.js";
+
+import { PostText } from "./PostText.js";
 
 function formatRelativeTime(iso: string): string {
   const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
@@ -11,41 +13,6 @@ function formatRelativeTime(iso: string): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
-}
-
-function PostText({ authorDid, uri }: { authorDid: string; uri: string }) {
-  const query = useQuery({
-    queryKey: ["post-text", authorDid, uri],
-    queryFn: async () => {
-      const url = `https://public.api.bsky.app/xrpc/app.bsky.feed.getPostThread?uri=${encodeURIComponent(uri)}&depth=0&parentHeight=0`;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-      const data = (await res.json()) as { thread?: { post?: { record?: { text?: string } } } };
-      return data.thread?.post?.record?.text ?? null;
-    },
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
-
-  if (query.isPending) {
-    return (
-      <p className="mt-1 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
-        <span className="inline-block h-3.5 w-48 animate-pulse rounded bg-neutral-200 dark:bg-neutral-700" />
-      </p>
-    );
-  }
-
-  if (!query.data) {
-    return (
-      <p className="mt-1 text-sm italic text-neutral-400 dark:text-neutral-600">Post unavailable</p>
-    );
-  }
-
-  return (
-    <p className="mt-1 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
-      {query.data}
-    </p>
-  );
 }
 
 function LabelRow({ label }: { label: RecentLabel }) {
