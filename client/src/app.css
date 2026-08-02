@@ -1,1 +1,90 @@
 @import "tailwindcss";
+
+:root {
+  color-scheme: light;
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  background: #faf9f6;
+  color: #1c1917;
+  font-synthesis: none;
+}
+
+body {
+  margin: 0;
+  background: #faf9f6;
+}
+
+::selection {
+  background: #2563eb;
+  color: white;
+}
+
+.home-page {
+  background: #faf9f6;
+}
+
+.home-shell {
+  width: min(100% - 2rem, 55rem);
+  margin-inline: auto;
+}
+
+.content-section {
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid #e7e5e4;
+}
+
+.section-heading {
+  font-size: 1rem;
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  color: #1c1917;
+}
+
+.step-number {
+  width: 1.25rem;
+  flex: none;
+  color: #a8a29e;
+  font-variant-numeric: tabular-nums;
+}
+
+.quiet-link {
+  text-decoration-line: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 25%, transparent);
+  text-underline-offset: 0.24em;
+  transition:
+    color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+
+.quiet-link:hover {
+  color: #1c1917;
+  text-decoration-color: currentColor;
+}
+
+.subscribe-link {
+  transition:
+    background-color 140ms ease,
+    transform 140ms ease;
+}
+
+.subscribe-link:hover {
+  transform: translateY(-1px);
+}
+
+.subscribe-link:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 32rem) {
+  .content-section {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+  }
+}
