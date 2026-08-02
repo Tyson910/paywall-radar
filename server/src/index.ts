@@ -6,12 +6,12 @@ import { startRuntime } from "./runtime.js";
 async function main() {
   const runtime = await startRuntime();
   const webSocketServer = new WebSocketServer({ noServer: true });
+  const honoWebSocketServer: any = webSocketServer;
   const server = serve(
     {
       fetch: runtime.app.fetch,
       port: runtime.port,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      websocket: { server: webSocketServer as any },
+      websocket: { server: honoWebSocketServer },
     },
     (info) => {
       console.log(`Labeler server listening on http://localhost:${info.port}`);

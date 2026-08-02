@@ -21,12 +21,20 @@ import { LabelStream } from "./label-stream.js";
 let directory: string;
 let client: Client;
 let db: Database;
+let testClientMetadata: AuthService["clientMetadata"];
 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), "paywall-radar-app-"));
   const databasePath = join(directory, "test.db");
   await initializeDatabase(databasePath);
   ({ client, db } = openDatabase(databasePath));
+  testClientMetadata = (
+    await createAuthService(db, {
+      adminDid: "did:plc:admin",
+      publicUrl: "http://127.0.0.1:4100",
+      sessionSecret: "a-secure-session-secret-that-is-long-enough",
+    })
+  ).clientMetadata;
 });
 
 afterAll(async () => {
@@ -82,7 +90,7 @@ describe("createApp", () => {
     const sessionSecret = "a-secure-session-secret-that-is-long-enough";
     const auth: AuthService = {
       adminDid,
-      clientMetadata: {} as AuthService["clientMetadata"],
+      clientMetadata: testClientMetadata,
       jwks: { keys: [] },
       publicUrl: "http://127.0.0.1:4100",
       sessionSecret,
@@ -154,7 +162,7 @@ describe("createApp", () => {
     const adminDid = "did:plc:admin";
     const auth: AuthService = {
       adminDid,
-      clientMetadata: {} as AuthService["clientMetadata"],
+      clientMetadata: testClientMetadata,
       jwks: { keys: [] },
       publicUrl: "http://127.0.0.1:4100",
       sessionSecret: "a-secure-session-secret-that-is-long-enough",
@@ -181,7 +189,7 @@ describe("createApp", () => {
     const sessionSecret = "a-secure-session-secret-that-is-long-enough";
     const auth: AuthService = {
       adminDid,
-      clientMetadata: {} as AuthService["clientMetadata"],
+      clientMetadata: testClientMetadata,
       jwks: { keys: [] },
       publicUrl: "http://127.0.0.1:4100",
       sessionSecret,
@@ -209,7 +217,7 @@ describe("createApp", () => {
   it("rejects OAuth login requests from an untrusted origin", async () => {
     const auth: AuthService = {
       adminDid: "did:plc:admin",
-      clientMetadata: {} as AuthService["clientMetadata"],
+      clientMetadata: testClientMetadata,
       jwks: { keys: [] },
       publicUrl: "https://paywall-radar.example",
       sessionSecret: "a-secure-session-secret-that-is-long-enough",

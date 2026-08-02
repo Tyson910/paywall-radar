@@ -16,7 +16,7 @@ export class LabelStream {
   }
 
   publish(seq: number, label: SignedLabel): void {
-    const frame = new Uint8Array(encodeLabelsFrame(seq, label)) as Uint8Array<ArrayBuffer>;
+    const frame: Uint8Array<ArrayBuffer> = new Uint8Array(encodeLabelsFrame(seq, label));
 
     for (const subscriber of this.#subscribers) {
       subscriber.send(frame);

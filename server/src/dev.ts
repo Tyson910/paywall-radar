@@ -34,10 +34,16 @@ async function main() {
     appType: "spa",
   });
 
-  const createDevelopmentServer = ((options: ServerOptions, honoListener: RequestListener) =>
-    createHttpServer(options, (request, response) => {
+  const createDevelopmentServer = (
+    optionsOrListener?: ServerOptions | RequestListener,
+    requestListener?: RequestListener,
+  ) => {
+    const serverOptions = typeof optionsOrListener === "function" ? {} : (optionsOrListener ?? {});
+    const honoListener =
+      typeof optionsOrListener === "function" ? optionsOrListener : requestListener;
+    return createHttpServer(serverOptions, (request, response) => {
       if (isBackendRequest(request.url)) {
-        honoListener(request, response);
+        honoListener?.(request, response);
         return;
       }
 
@@ -49,18 +55,19 @@ async function main() {
           return;
         }
 
-        honoListener(request, response);
+        honoListener?.(request, response);
       });
-    })) as typeof createHttpServer;
+    });
+  };
 
   const webSocketServer = new WebSocketServer({ noServer: true });
+  const honoWebSocketServer: any = webSocketServer;
   const server = serve(
     {
       fetch: runtime.app.fetch,
       port: runtime.port,
       createServer: createDevelopmentServer,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      websocket: { server: webSocketServer as any },
+      websocket: { server: honoWebSocketServer },
     },
     (info) => {
       console.log(`Development server listening on http://localhost:${info.port}`);

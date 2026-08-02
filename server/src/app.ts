@@ -139,7 +139,8 @@ export function createApp({
 
                 for (const row of rows) {
                   const frame = encodeLabelsFrame(row.seq, rowToSignedLabel(row));
-                  ws.send(new Uint8Array(frame) as Uint8Array<ArrayBuffer>);
+                  const message: Uint8Array<ArrayBuffer> = new Uint8Array(frame);
+                  ws.send(message);
                 }
 
                 log.info(

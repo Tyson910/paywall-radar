@@ -31,8 +31,10 @@ export async function loadSigningKey(key: string): Promise<Secp256k1Keypair> {
   return Secp256k1Keypair.import(key, { exportable: false });
 }
 
-function excludeNullish(obj: Record<string, unknown>): Record<string, unknown> {
-  const result: Record<string, unknown> = {};
+type LexMap = { [key: string]: LexValue | undefined };
+
+function excludeNullish(obj: LexMap): LexMap {
+  const result: LexMap = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value != null) result[key] = value;
   }
@@ -54,7 +56,7 @@ export async function signLabel(
     exp: unsigned.exp,
   });
 
-  const bytes = encode(toSign as LexValue);
+  const bytes = encode(toSign);
   const sig = await keypair.sign(bytes);
 
   const result: SignedLabel = {
@@ -89,24 +91,24 @@ function toLabelLex(label: SignedLabel): LexValue {
     cts: label.cts,
     exp: label.exp,
     sig: label.sig,
-  }) as LexValue;
+  });
 }
 
 export function encodeLabelsFrame(seq: number, label: SignedLabel): Uint8Array {
-  const header = encode({ op: 1, t: "#labels" } as LexValue);
-  const body = encode({ seq, labels: [toLabelLex(label)] } as LexValue);
+  const header = encode({ op: 1, t: "#labels" });
+  const body = encode({ seq, labels: [toLabelLex(label)] });
   return concatBytes(header, body);
 }
 
 export function encodeErrorFrame(name: string, message: string): Uint8Array {
-  const header = encode({ op: -1 } as LexValue);
-  const body = encode({ error: name, message } as LexValue);
+  const header = encode({ op: -1 });
+  const body = encode({ error: name, message });
   return concatBytes(header, body);
 }
 
 export function formatLabelForHttp(label: SignedLabel): Record<string, unknown> {
   const base64 = Buffer.from(label.sig).toString("base64");
-  return excludeNullish({
+  const formatted = excludeNullish({
     ver: label.ver,
     src: label.src,
     uri: label.uri,
@@ -117,4 +119,5 @@ export function formatLabelForHttp(label: SignedLabel): Record<string, unknown> 
     exp: label.exp,
     sig: { $bytes: base64 },
   });
+  return formatted;
 }

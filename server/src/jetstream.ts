@@ -69,7 +69,8 @@ function validationReason(
 
 function parseJson(message: string): JsonParseResult {
   try {
-    return { success: true, value: JSON.parse(message) as unknown };
+    const value: unknown = JSON.parse(message);
+    return { success: true, value };
   } catch {
     return { success: false };
   }

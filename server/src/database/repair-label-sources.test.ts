@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { Secp256k1Keypair, verifySignature } from "@atproto/crypto";
-import { type LexValue, encode } from "@atproto/lex-cbor";
+import { encode } from "@atproto/lex-cbor";
 import { describe, expect, it } from "vitest";
 
 import { openDatabase } from "./connection.js";
@@ -79,7 +79,7 @@ describe("repairLabelSources", () => {
             uri: row.uri,
             val: row.val,
             cts: row.cts,
-          } as LexValue);
+          });
           await expect(
             verifySignature(keypair.did(), bytes, new Uint8Array(row.sig)),
           ).resolves.toBe(true);

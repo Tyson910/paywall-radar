@@ -11,8 +11,9 @@ const adminClient = hc<AdminRoutes>("/api/admin");
 
 export function apiErrorMessage(error: unknown, fallback: string): string {
   if (error instanceof DetailedError) {
-    const detail = error.detail as { data?: unknown } | undefined;
-    const data = detail?.data;
+    const detail: unknown = error.detail;
+    const data =
+      typeof detail === "object" && detail !== null && "data" in detail ? detail.data : undefined;
     if (typeof data === "object" && data && "error" in data && typeof data.error === "string") {
       return data.error;
     }
@@ -55,7 +56,7 @@ export function adminDomainsQueryOptions() {
 export function labelsQueryOptions(domain?: string) {
   return infiniteQueryOptions({
     queryKey: ["labels", { domain }] as const,
-    queryFn: async ({ pageParam }) => {
+    queryFn: async ({ pageParam }: { pageParam: number | undefined }) => {
       return parseResponse(
         dashboardClient.labels.$get({
           query: {
@@ -65,7 +66,7 @@ export function labelsQueryOptions(domain?: string) {
         }),
       );
     },
-    initialPageParam: undefined as number | undefined,
+    initialPageParam: undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     staleTime: 10_000,
   });

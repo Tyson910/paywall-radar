@@ -32,7 +32,12 @@ describe("OAuth stores", () => {
   });
 
   it("prunes OAuth state older than ten minutes when storing new state", async () => {
-    const value = {} as NodeSavedState;
+    const value: NodeSavedState = {
+      iss: "https://issuer.example",
+      authMethod: { method: "none" },
+      verifier: "verifier",
+      dpopJwk: { kty: "EC", crv: "P-256", x: "x", y: "y", d: "d" },
+    };
     await db.insert(oauthState).values({
       key: "expired",
       value,

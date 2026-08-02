@@ -1,6 +1,7 @@
 import { Secp256k1Keypair, verifySignature } from "@atproto/crypto";
-import { type LexValue, decodeAll, encode } from "@atproto/lex-cbor";
+import { decodeAll, encode } from "@atproto/lex-cbor";
 import { describe, expect, it } from "vitest";
+import * as z from "zod";
 
 import {
   encodeErrorFrame,
@@ -34,7 +35,7 @@ describe("signLabel", () => {
       uri: signed.uri,
       val: signed.val,
       cts: signed.cts,
-    } as LexValue);
+    });
     await expect(verifySignature(keypair.did(), bytes, signed.sig)).resolves.toBe(true);
   });
 
@@ -89,11 +90,12 @@ describe("encodeLabelsFrame", () => {
     const chunks = [...decodeAll(frame)];
     expect(chunks).toHaveLength(2);
     expect(chunks[0]).toEqual({ op: 1, t: "#labels" });
-    expect((chunks[1] as { seq: number }).seq).toBe(42);
-    expect((chunks[1] as { labels: unknown[] }).labels).toHaveLength(1);
-    expect((chunks[1] as { labels: Record<string, unknown>[] }).labels[0]).not.toHaveProperty(
-      "neg",
-    );
+    const body = z
+      .object({ seq: z.number(), labels: z.array(z.record(z.string(), z.unknown())) })
+      .parse(chunks[1]);
+    expect(body.seq).toBe(42);
+    expect(body.labels).toHaveLength(1);
+    expect(body.labels[0]).not.toHaveProperty("neg");
   });
 });
 

@@ -2,6 +2,7 @@ import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
 
 import { Secp256k1Keypair } from "@atproto/crypto";
+import * as z from "zod";
 
 const PDS_URL = process.env.PDS_URL ?? "https://bsky.social";
 
@@ -9,6 +10,20 @@ interface Session {
   did: string;
   accessJwt: string;
 }
+
+const sessionSchema = z.object({
+  did: z.string(),
+  accessJwt: z.string(),
+});
+
+const didCredentialsSchema = z.object({
+  verificationMethods: z.record(z.string(), z.string()).optional(),
+  services: z.record(z.string(), z.object({ type: z.string(), endpoint: z.string() })).optional(),
+});
+
+const signedOperationSchema = z.object({
+  operation: z.record(z.string(), z.unknown()),
+});
 
 async function xrpc(
   session: Session | null,
@@ -59,10 +74,12 @@ async function main() {
 
     // Authenticate
     console.log("\nAuthenticating...");
-    const session = (await xrpc(null, "POST", "com.atproto.server.createSession", {
-      identifier,
-      password,
-    })) as Session;
+    const session = sessionSchema.parse(
+      await xrpc(null, "POST", "com.atproto.server.createSession", {
+        identifier,
+        password,
+      }),
+    );
     console.log(`Authenticated as ${session.did}`);
 
     // Generate or import signing key
@@ -80,14 +97,9 @@ async function main() {
 
     // Check current DID document
     console.log("\nChecking current DID document...");
-    const credentials = (await xrpc(
-      session,
-      "GET",
-      "com.atproto.identity.getRecommendedDidCredentials",
-    )) as {
-      verificationMethods?: Record<string, string>;
-      services?: Record<string, { type: string; endpoint: string }>;
-    };
+    const credentials = didCredentialsSchema.parse(
+      await xrpc(session, "GET", "com.atproto.identity.getRecommendedDidCredentials"),
+    );
 
     const hasKey = credentials.verificationMethods?.atproto_label === publicDidKey;
     const hasService = credentials.services?.atproto_labeler?.endpoint === serviceEndpoint;
@@ -119,11 +131,13 @@ async function main() {
         },
       };
 
-      const signResult = (await xrpc(session, "POST", "com.atproto.identity.signPlcOperation", {
-        token,
-        verificationMethods,
-        services,
-      })) as { operation: unknown };
+      const signResult = signedOperationSchema.parse(
+        await xrpc(session, "POST", "com.atproto.identity.signPlcOperation", {
+          token,
+          verificationMethods,
+          services,
+        }),
+      );
 
       // Submit the PLC operation
       console.log("Submitting PLC operation...");
