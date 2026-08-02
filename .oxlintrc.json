@@ -1,6 +1,8 @@
 {
   "options": {
-    "typeAware": true
+    "typeAware": true,
+    "respectEslintDisableDirectives": false,
+    "reportUnusedDisableDirectives": "error"
   },
   "jsPlugins": [
     {
@@ -13,7 +15,23 @@
     }
   ],
   "rules": {
+    "no-implicit-coercion": ["error", { "boolean": true, "number": false, "string": false }],
+    "typescript/ban-ts-comment": [
+      "error",
+      {
+        "ts-expect-error": true,
+        "ts-ignore": true,
+        "ts-nocheck": true,
+        "ts-check": false
+      }
+    ],
+    "typescript/consistent-type-imports": [
+      "error",
+      { "prefer": "type-imports", "fixStyle": "separate-type-imports" }
+    ],
     "typescript/consistent-type-assertions": ["error", { "assertionStyle": "never" }],
+    "typescript/no-explicit-any": "error",
+    "typescript/no-inferrable-types": "error",
     "typescript/no-deprecated": "error",
     "react-you-might-not-need-an-effect/no-derived-state": "error",
     "react-you-might-not-need-an-effect/no-chain-state-updates": "error",

@@ -6,9 +6,9 @@ import {
 
 import { serve } from "@hono/node-server";
 import { createServer as createViteServer } from "vite";
-import { WebSocketServer } from "ws";
 
 import { startRuntime } from "./runtime.js";
+import { createWebSocketServer } from "./websocket-server.js";
 
 function isBackendRequest(pathname: string | undefined): boolean {
   return (
@@ -60,14 +60,13 @@ async function main() {
     });
   };
 
-  const webSocketServer = new WebSocketServer({ noServer: true });
-  const honoWebSocketServer: any = webSocketServer;
+  const webSocketServer = createWebSocketServer();
   const server = serve(
     {
       fetch: runtime.app.fetch,
       port: runtime.port,
       createServer: createDevelopmentServer,
-      websocket: { server: honoWebSocketServer },
+      websocket: { server: webSocketServer },
     },
     (info) => {
       console.log(`Development server listening on http://localhost:${info.port}`);

@@ -1,17 +1,16 @@
 import { serve } from "@hono/node-server";
-import { WebSocketServer } from "ws";
 
 import { startRuntime } from "./runtime.js";
+import { createWebSocketServer } from "./websocket-server.js";
 
 async function main() {
   const runtime = await startRuntime();
-  const webSocketServer = new WebSocketServer({ noServer: true });
-  const honoWebSocketServer: any = webSocketServer;
+  const webSocketServer = createWebSocketServer();
   const server = serve(
     {
       fetch: runtime.app.fetch,
       port: runtime.port,
-      websocket: { server: honoWebSocketServer },
+      websocket: { server: webSocketServer },
     },
     (info) => {
       console.log(`Labeler server listening on http://localhost:${info.port}`);
