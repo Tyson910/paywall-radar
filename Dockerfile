@@ -30,7 +30,7 @@ RUN pnpm build && pnpm build:client
 
 
 # ---- litestream (copy static binary only) ------------------------------------
-FROM litestream/litestream:0.5.14-scratch AS litestream
+FROM litestream/litestream:0.5.17-scratch AS litestream
 
 
 # ---- production database clone ----------------------------------------------
