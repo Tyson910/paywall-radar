@@ -121,6 +121,10 @@ export async function startRuntime(): Promise<Runtime> {
           handlePost,
           recordFailure: (failure) => recordFailedEvent(db, failure),
           saveState: (state) => saveJetstreamCursorState(db, source.id, state),
+          // Each flush is a SQLite transaction, which Litestream replicates as
+          // one LTX file upload (a billable R2 Class A op). 30s keeps that cost
+          // low; restarts replay at most ~40s of idempotent firehose events.
+          flushIntervalMs: 30_000,
           sourceId: source.id,
           endpoint: source.endpoint,
         }),
