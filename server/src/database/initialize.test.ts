@@ -16,7 +16,7 @@ describe("initializeDatabase", () => {
 
     try {
       const first = await initializeDatabase(databasePath);
-      const firstConnection = openDatabase(databasePath);
+      const firstConnection = await openDatabase(databasePath);
       const [cursorRow] = await firstConnection.db.select().from(cursor).where(eq(cursor.id, 1));
       firstConnection.client.close();
 
@@ -24,7 +24,7 @@ describe("initializeDatabase", () => {
       expect(cursorRow).toMatchObject({ id: 1, cursorUs: 0, postsScanned: 0 });
 
       const second = await initializeDatabase(databasePath);
-      const secondConnection = openDatabase(databasePath);
+      const secondConnection = await openDatabase(databasePath);
       const [secondCount] = await secondConnection.db.select({ value: count() }).from(domains);
       secondConnection.client.close();
 

@@ -23,7 +23,7 @@ describe("OAuth stores", () => {
     directory = await mkdtemp(join(tmpdir(), "paywall-radar-oauth-"));
     const databasePath = join(directory, "test.db");
     await initializeDatabase(databasePath);
-    ({ client, db } = openDatabase(databasePath));
+    ({ client, db } = await openDatabase(databasePath));
   });
 
   afterEach(async () => {

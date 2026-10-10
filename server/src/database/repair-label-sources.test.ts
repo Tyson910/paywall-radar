@@ -18,7 +18,7 @@ describe("repairLabelSources", () => {
 
     try {
       await initializeDatabase(databasePath);
-      const { client, db } = openDatabase(databasePath);
+      const { client, db } = await openDatabase(databasePath);
 
       try {
         const keypair = await Secp256k1Keypair.create({ exportable: true });

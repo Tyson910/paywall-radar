@@ -17,7 +17,7 @@ describe("recordFailedEvent", () => {
 
     try {
       await initializeDatabase(databasePath);
-      const connection = openDatabase(databasePath);
+      const connection = await openDatabase(databasePath);
 
       for (let start = 0; start < 10_000; start += 500) {
         await connection.db.insert(failedEvents).values(

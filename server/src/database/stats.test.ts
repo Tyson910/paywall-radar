@@ -32,7 +32,7 @@ beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), "paywall-radar-stats-"));
   const databasePath = join(directory, "test.db");
   await initializeDatabase(databasePath);
-  ({ client, db } = openDatabase(databasePath));
+  ({ client, db } = await openDatabase(databasePath));
 });
 
 afterAll(async () => {

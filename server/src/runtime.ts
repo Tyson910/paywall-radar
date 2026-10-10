@@ -36,7 +36,7 @@ export async function startRuntime(): Promise<Runtime> {
   const labelStream = new LabelStream();
 
   try {
-    const connection = openDatabase(options.dbPath);
+    const connection = await openDatabase(options.dbPath);
     client = connection.client;
     const { db } = connection;
 

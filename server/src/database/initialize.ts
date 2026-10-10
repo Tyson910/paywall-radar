@@ -17,7 +17,7 @@ export interface DatabaseInitializationResult {
 export async function initializeDatabase(
   databasePath: string,
 ): Promise<DatabaseInitializationResult> {
-  const { client, db } = openDatabase(databasePath);
+  const { client, db } = await openDatabase(databasePath);
 
   try {
     await migrate(db, { migrationsFolder });

@@ -36,7 +36,7 @@ if (correctSource === incorrectSource) {
   );
 }
 
-const { client, db } = openDatabase(databasePath);
+const { client, db } = await openDatabase(databasePath);
 
 try {
   if (write) await prepareLabelRepair(db);

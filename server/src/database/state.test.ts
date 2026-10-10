@@ -21,7 +21,7 @@ describe("database state", () => {
 
     try {
       await initializeDatabase(databasePath);
-      const { client, db } = openDatabase(databasePath);
+      const { client, db } = await openDatabase(databasePath);
 
       try {
         const patterns = await loadDomainPatterns(db);
